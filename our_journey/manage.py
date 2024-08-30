@@ -9,7 +9,6 @@ def main():
     """Run administrative tasks."""
     match platform.system():
         case "Windows":
-            print(1)
             os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.local")
         case "Darwin":
             os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.local")
