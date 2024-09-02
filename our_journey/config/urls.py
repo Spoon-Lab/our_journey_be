@@ -14,17 +14,32 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+
 from django.contrib import admin
-from django.urls import path, include
-from drf_spectacular.views import SpectacularJSONAPIView, SpectacularAPIView, SpectacularRedocView, \
-    SpectacularSwaggerView, SpectacularYAMLAPIView
+from django.urls import include, path
+from drf_spectacular.views import (
+    SpectacularAPIView,
+    SpectacularJSONAPIView,
+    SpectacularRedocView,
+    SpectacularSwaggerView,
+    SpectacularYAMLAPIView,
+)
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('auth/', include('dj_rest_auth.urls')),
-    path('auth/signup/', include('dj_rest_auth.registration.urls')),
+    path("admin/", admin.site.urls),
+    path("auth/", include("dj_rest_auth.urls")),
+    path("auth/signup/", include("dj_rest_auth.registration.urls")),
+    path("accounts/", include("allauth.urls")),
     path("swagger.json/", SpectacularJSONAPIView.as_view(), name="schema-json"),
     path("swagger.yaml/", SpectacularYAMLAPIView.as_view(), name="swagger-yaml"),
-    path("swagger/", SpectacularSwaggerView.as_view(url_name="schema-json"), name="swagger-ui"),
-    path("redoc/", SpectacularRedocView.as_view(url_name="schema-json"), name="redoc", ),
+    path(
+        "swagger/",
+        SpectacularSwaggerView.as_view(url_name="schema-json"),
+        name="swagger-ui",
+    ),
+    path(
+        "redoc/",
+        SpectacularRedocView.as_view(url_name="schema-json"),
+        name="redoc",
+    ),
 ]

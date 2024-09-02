@@ -6,7 +6,7 @@ def read_env(base_dir, path=None):
     if path:
         local_env = open(os.path.join(base_dir, path))
     else:
-        local_env = open(os.path.join(base_dir, '.env'))
+        local_env = open(os.path.join(base_dir, ".env"))
 
     env_list = dict()
 
@@ -17,8 +17,8 @@ def read_env(base_dir, path=None):
         if line.count("=") == 0:
             raise SyntaxError(".env file MUST HAVE `=` delimiter in each line.")
 
-        line = line.replace('\n', '')
-        line = line.split('=')
+        line = line.replace("\n", "")
+        line = line.split("=")
         key = line[0]
         value = line[1]
         env_list[key] = value
@@ -27,5 +27,3 @@ def read_env(base_dir, path=None):
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-
-read_env(base_dir=BASE_DIR)
