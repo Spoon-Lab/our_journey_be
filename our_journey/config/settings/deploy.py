@@ -1,6 +1,7 @@
 from .base import *
 import os
-from .manage_secret.deploy import read_secret
+
+from .manage_secret.local import read_env
 
 DEBUG = False
 
@@ -21,7 +22,9 @@ CORS_ORIGIN_WHITELIST = [
 
 SECURE_CROSS_ORIGIN_OPENER_POLICY = None
 
-SECRET_KEY = read_secret('DJANGO_SECRET_KEY')
+env = read_env(base_dir=BASE_DIR)
+
+SECRET_KEY = env['DJANGO_SECRET_KEY']
 
 
 DATABASES = {
