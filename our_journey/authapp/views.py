@@ -1,73 +1,69 @@
 import requests
 from django.conf import settings
+from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import redirect
 import jwt
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework_simplejwt.tokens import RefreshToken
 
-from our_journey.config.settings.base import CLIENT_ID, GOOGLE_SECRET
 
+@login_required
+def auth_redirect_view(request):
+    user = request.user
 
-def get_google_access_token(code):
-    token_url = "https://oauth2.googleapis.com/token"
-    redirect_uri = "http://127.0.0.1:8000/accounts/google/login/callback/"  # Google OAuth 설정에서 지정한 redirect URI와 동일해야 합니다.
-    token_data = {
-        "code": code,
-        "client_id": CLIENT_ID,
-        "client_secret": GOOGLE_SECRET,
-        "redirect_uri": redirect_uri,
-        "grant_type": "authorization_code",
+    # JWT 토큰 생성
+    refresh = RefreshToken.for_user(user)
+    access_token = str(refresh.access_token)
+    refresh_token = str(refresh)
+
+    # 필요한 경우 이 토큰을 템플릿에 전달하거나 JSON 응답으로 반환할 수 있습니다.
+    context = {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "user_id": user.id,
     }
-
-    token_response = requests.post(token_url, data=token_data)
-    token_response_json = token_response.json()
-
-    return token_response_json  # access_token 및 id_token 포함
+    return JsonResponse(context)
 
 
-def decode_google_jwt(id_token):
-    try:
-        decoded_token = jwt.decode(id_token, options={"verify_signature": False})
-        return decoded_token
-    except jwt.ExpiredSignatureError:
-        return None
-    except jwt.DecodeError:
-        return None
+class UserAuthenticationView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
 
+    def get(self, request):
+        user = request.user
+        token = request.auth  # 요청에서 Bearer 토큰 값
 
-def google_callback(request):
-    code = request.GET.get("code")
-    if not code:
-        return JsonResponse({"error": "No code provided"}, status=400)
+        # 첫 번째 케이스: 토큰이 없을 때
+        if token is None:
+            return JsonResponse(
+                {
+                    "error": "Token is missing",
+                    "authentication": False,
+                    "authorization": "",
+                },
+                status=401,
+            )
 
-    token_data = get_google_access_token(code)
+        # 두 번째 케이스: 토큰은 있지만 연관된 user_id가 없을 때
+        if not user.is_authenticated:
+            return JsonResponse(
+                {
+                    "error": "Invalid token or user not found",
+                    "authentication": False,
+                    "authorization": "",
+                },
+                status=401,
+            )
 
-    id_token = token_data.get("id_token")
-    access_token = token_data.get("access_token")
+        # authorization 필드 설정: 관리자 여부에 따라 값 설정
+        authorization_status = "admin" if user.is_staff else ""
 
-    if not id_token:
-        return JsonResponse({"error": "Failed to retrieve ID token"}, status=400)
-
-    decoded_token = decode_google_jwt(id_token)
-    if not decoded_token:
-        return JsonResponse({"error": "Failed to decode ID token"}, status=400)
-
-    # 여기에서 사용자 정보를 확인하고 세션이나 쿠키를 설정하거나, 사용자 계정을 생성할 수 있습니다.
-    # 예: 이메일 정보 추출
-    email = decoded_token.get("email")
-
-    # 사용자 인증, 계정 생성 또는 로그인 처리
-    # 예를 들어, 기존 사용자를 찾거나 새로 생성
-    # user = User.objects.get_or_create(email=email)[0]
-    # login(request, user)
-    print(access_token)
-    # 이후 원하는 곳으로 리디렉션 또는 토큰 반환
-    return JsonResponse(
-        {
-            "id_token": id_token,
-            "access_token": access_token,
-            "user_info": decoded_token,  # 디코딩된 사용자 정보 반환 (선택 사항)
+        response_data = {
+            "user_id": user.id,
+            "authentication": True,
+            "authorization": authorization_status,
         }
-    )
+        return JsonResponse(response_data)

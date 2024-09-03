@@ -35,7 +35,7 @@ DATABASES = {
         "NAME": "ourjourney_authdb",
         "USER": "root",
         "PASSWORD": DB_PASSWORD,
-        "HOST": "127.0.0.1",
+        "HOST": "db",
         "PORT": "3306",
     }
 }

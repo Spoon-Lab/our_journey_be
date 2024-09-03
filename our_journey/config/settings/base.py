@@ -81,7 +81,7 @@ AUTHENTICATION_BACKENDS = (
 )
 
 # Allauth 설정
-LOGIN_REDIRECT_URL = "/"
+LOGIN_REDIRECT_URL = "/auth/redirect/"
 # 로그아웃 시
 ACCOUNT_LOGOUT_REDIRECT_URL = "/"
 

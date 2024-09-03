@@ -1,13 +1,6 @@
 version: '3.7'
 services:
-  web:
-    image: our_journey_django
-    env_file:
-      - .env
-    ports:
-      - "8000:8000"
-
-  mysql:
+  db:
     image: mysql
     container_name: mysql_service
     env_file:
@@ -15,3 +8,18 @@ services:
     command: mysqld --character-set-server=utf8 --collation-server=utf8_general_ci
     ports:
       - "3306:3306"
+    networks:
+      - my_network
+  web:
+    image: our_journey_django
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    networks:
+      - my_network
+networks:
+  my_network:
+    driver: bridge
