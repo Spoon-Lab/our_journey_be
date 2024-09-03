@@ -18,15 +18,18 @@ INSTALLED_APPS = [
     "allauth.socialaccount.providers.google",
     "rest_framework",
     "rest_framework.authtoken",
+    "rest_framework_simplejwt",
     "dj_rest_auth",
+    "dj_rest_auth.registration",
     "drf_spectacular",
+    "authapp",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
-    # "django.middleware.csrf.CsrfViewMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -35,9 +38,11 @@ MIDDLEWARE = [
 
 env = read_env(base_dir=BASE_DIR)
 
+
 CLIENT_ID = env["CLIENT_ID"]
 GOOGLE_SECRET = env["GOOGLE_SECRET"]
 
+# 구글 OAuth2 설정
 SOCIALACCOUNT_PROVIDERS = {
     "google": {
         "SCOPE": ["profile", "email"],
@@ -68,27 +73,48 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
+SITE_ID = 4
+
 AUTHENTICATION_BACKENDS = (
     "django.contrib.auth.backends.ModelBackend",
     "allauth.account.auth_backends.AuthenticationBackend",
 )
 
-SITE_ID = 1
-
 # Allauth 설정
 LOGIN_REDIRECT_URL = "/"
+# 로그아웃 시
 ACCOUNT_LOGOUT_REDIRECT_URL = "/"
-ACCOUNT_EMAIL_VERIFICATION = "mandatory"
-ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_USERNAME_REQUIRED = False
-ACCOUNT_AUTHENTICATION_METHOD = "email"
-ACCOUNT_CONFIRM_EMAIL_ON_GET = True
-ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 3
+
+
+AUTH_USER_MODEL = "authapp.User"
 
 REST_USE_JWT = True
 
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_PORT = "587"
+EMAIL_HOST_USER = env["EMAIL_HOST_USER"]
+EMAIL_HOST_PASSWORD = env["EMAIL_HOST_PASSWORD"]
+EMAIL_USE_TLS = True
+DEFAULT_FORM_EMAIL = EMAIL_HOST_USER
+
+ACCOUNT_CONFIRM_EMAIL_ON_GET = True
+ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_AUTHENTICATION_METHOD = "email"
+
+ACCOUNT_EMAIL_VERIFICATION = "mandatory"
+
+EMAIL_CONFIRMATION_AUTHENTICATED_REDIRECT_URL = "/"
+ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 1
+ACCOUNT_EMAIL_SUBJECT_PREFIX = "이메일 인증"
+
 REST_FRAMEWORK = {
-    # YOUR SETTINGS
+    # jwt 인가 setting
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ),
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
