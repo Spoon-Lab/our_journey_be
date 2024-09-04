@@ -27,15 +27,15 @@ env = read_env(base_dir=BASE_DIR)
 
 SECRET_KEY = env["DJANGO_SECRET_KEY"]
 
-DB_PASSWORD = env["DB_PASSWORD"]
+MYSQL_PASSWORD = env["MYSQL_PASSWORD"]
 
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
         "NAME": "ourjourney_authdb",
         "USER": "root",
-        "PASSWORD": DB_PASSWORD,
-        "HOST": "db",
+        "PASSWORD": MYSQL_PASSWORD,
+        "HOST": "host.docker.internal",
         "PORT": "3306",
     }
 }

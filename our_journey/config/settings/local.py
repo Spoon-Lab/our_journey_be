@@ -21,15 +21,15 @@ CORS_ALLOW_METHODS = ["GET", "POST", "PUT", "HEAD", "OPTIONS", "DELETE"]
 
 CORS_ORIGIN_ALLOW_ALL = True
 
-DB_PASSWORD = env["DB_PASSWORD"]
+MYSQL_PASSWORD = env["MYSQL_PASSWORD"]
 
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
         "NAME": "ourjourney_authdb",
         "USER": "root",
-        "PASSWORD": DB_PASSWORD,
-        "HOST": "127.0.0.1",
+        "PASSWORD": MYSQL_PASSWORD,
+        "HOST": "localhost",
         "PORT": "3306",
     }
 }

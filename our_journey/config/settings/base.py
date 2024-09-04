@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 from pathlib import Path
 from .manage_secret.local import read_env
 
@@ -22,7 +23,7 @@ INSTALLED_APPS = [
     "dj_rest_auth",
     "dj_rest_auth.registration",
     "drf_spectacular",
-    "authapp",
+    "apps.authapp",
 ]
 
 MIDDLEWARE = [
@@ -38,7 +39,7 @@ MIDDLEWARE = [
 
 env = read_env(base_dir=BASE_DIR)
 
-
+DJANGO_SECRET_KEY = env["DJANGO_SECRET_KEY"]
 CLIENT_ID = env["CLIENT_ID"]
 GOOGLE_SECRET = env["GOOGLE_SECRET"]
 
@@ -51,7 +52,6 @@ SOCIALACCOUNT_PROVIDERS = {
         "SECRET": GOOGLE_SECRET,
     }
 }
-
 
 ROOT_URLCONF = "config.urls"
 
@@ -80,11 +80,15 @@ AUTHENTICATION_BACKENDS = (
     "allauth.account.auth_backends.AuthenticationBackend",
 )
 
+# rest-auth 회원가입 필드 custom
+REST_AUTH_REGISTER_SERIALIZERS = {
+    "REGISTER_SERIALIZER": "apps.authapp.serializers.CustomRegisterSerializer",
+}
+
 # Allauth 설정
 LOGIN_REDIRECT_URL = "/auth/redirect/"
 # 로그아웃 시
 ACCOUNT_LOGOUT_REDIRECT_URL = "/"
-
 
 AUTH_USER_MODEL = "authapp.User"
 
@@ -96,26 +100,55 @@ EMAIL_PORT = "587"
 EMAIL_HOST_USER = env["EMAIL_HOST_USER"]
 EMAIL_HOST_PASSWORD = env["EMAIL_HOST_PASSWORD"]
 EMAIL_USE_TLS = True
-DEFAULT_FORM_EMAIL = EMAIL_HOST_USER
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
-ACCOUNT_CONFIRM_EMAIL_ON_GET = True
+ACCOUNT_CONFIRM_EMAIL_ON_GET = True  # 유저가 링크 클릭 시 회원가입 완료
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_USERNAME_REQUIRED = False
 ACCOUNT_AUTHENTICATION_METHOD = "email"
 
+# 회원가입 시 이메일 인증 강제
 ACCOUNT_EMAIL_VERIFICATION = "mandatory"
 
+# 사이트와 관련한 자동응답을 받을 이메일 주소,'webmaster@localhost'
 EMAIL_CONFIRMATION_AUTHENTICATED_REDIRECT_URL = "/"
+
+# 이메일 인증 만료 기간(일 기준)
 ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 1
-ACCOUNT_EMAIL_SUBJECT_PREFIX = "이메일 인증"
+
+ACCOUNT_EMAIL_SUBJECT_PREFIX = "아워 저니(Our Journey) "
+
+TEMPLATES = [
+    {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [BASE_DIR / "templates"],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+            ],
+        },
+    },
+]
 
 REST_FRAMEWORK = {
     # jwt 인가 setting
-    "DEFAULT_AUTHENTICATION_CLASSES": (
+    "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework_simplejwt.authentication.JWTAuthentication",
-    ),
+    ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=3),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": False,
+    "SIGNING_KEY": DJANGO_SECRET_KEY,
 }
 
 SPECTACULAR_SETTINGS = {

@@ -1,10 +1,15 @@
 import requests
+from allauth.account.models import EmailConfirmation, EmailConfirmationHMAC
 from django.conf import settings
+from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseRedirect
 from django.shortcuts import redirect
 import jwt
-from rest_framework.permissions import IsAuthenticated
+from rest_framework import status
+from rest_framework.decorators import api_view
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -19,7 +24,6 @@ def auth_redirect_view(request):
     access_token = str(refresh.access_token)
     refresh_token = str(refresh)
 
-    # 필요한 경우 이 토큰을 템플릿에 전달하거나 JSON 응답으로 반환할 수 있습니다.
     context = {
         "access_token": access_token,
         "refresh_token": refresh_token,
@@ -67,3 +71,33 @@ class UserAuthenticationView(APIView):
             "authorization": authorization_status,
         }
         return JsonResponse(response_data)
+
+
+class ConfirmEmailView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, *args, **kwargs):
+        self.object = confirmation = self.get_object()
+        confirmation.confirm(self.request)
+        # A React Router Route will handle the failure scenario
+        # return Response({"detail":"login success"})
+        return HttpResponseRedirect(redirect_to="/#/email-confirmed")
+
+    def get_object(self, queryset=None):
+        key = self.kwargs["key"]
+        email_confirmation = EmailConfirmationHMAC.from_key(key)
+        if not email_confirmation:
+            if queryset is None:
+                queryset = self.get_queryset()
+            try:
+                email_confirmation = queryset.get(key=key.lower())
+            except EmailConfirmation.DoesNotExist:
+                # A React Router Route will handle the failure scenario
+                # return Response({"detail":"login fail"})
+                return HttpResponseRedirect(redirect_to="/")
+        return email_confirmation
+
+    def get_queryset(self):
+        qs = EmailConfirmation.objects.all_valid()
+        qs = qs.select_related("email_address__user")
+        return qs

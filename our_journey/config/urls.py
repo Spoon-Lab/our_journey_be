@@ -28,10 +28,7 @@ from drf_spectacular.views import (
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("user/", include("dj_rest_auth.urls")),
-    path("user/signup/", include("dj_rest_auth.registration.urls")),
-    path("accounts/", include("allauth.urls")),
-    path("auth/", include("authapp.urls")),
+    path("auth/", include("apps.authapp.urls")),
     path("swagger.json/", SpectacularJSONAPIView.as_view(), name="schema-json"),
     path("swagger.yaml/", SpectacularYAMLAPIView.as_view(), name="swagger-yaml"),
     path(
