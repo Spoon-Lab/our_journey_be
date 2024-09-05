@@ -1,13 +1,21 @@
 from .base import *
 from .manage_secret.local import read_env
 
-DEBUG = True
+import environ
+
+env = environ.Env(DEBUG=(bool, False))
+
+# 환경변수 파일 읽어오기
+environ.Env.read_env(env_file=os.path.join(BASE_DIR, ".env"))
+
+SECRET_KEY = env("DJANGO_SECRET_KEY")
+
+MYSQL_PASSWORD = env("MYSQL_PASSWORD")
+
+DEBUG = False
 
 ALLOWED_HOSTS = ["*"]
 
-env = read_env(base_dir=BASE_DIR)
-
-SECRET_KEY = env["DJANGO_SECRET_KEY"]
 
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:3000",
@@ -21,15 +29,13 @@ CORS_ALLOW_METHODS = ["GET", "POST", "PUT", "HEAD", "OPTIONS", "DELETE"]
 
 CORS_ORIGIN_ALLOW_ALL = True
 
-MYSQL_PASSWORD = env["MYSQL_PASSWORD"]
-
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
         "NAME": "ourjourney_authdb",
         "USER": "root",
         "PASSWORD": MYSQL_PASSWORD,
-        "HOST": "localhost",
+        "HOST": "mysql_service",  # MySQL 컨테이너 이름
         "PORT": "3306",
     }
 }
