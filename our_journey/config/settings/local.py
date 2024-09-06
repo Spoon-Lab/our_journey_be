@@ -1,5 +1,4 @@
 from .base import *
-from .manage_secret.local import read_env
 
 import environ
 
@@ -12,7 +11,7 @@ SECRET_KEY = env("DJANGO_SECRET_KEY")
 
 MYSQL_PASSWORD = env("MYSQL_PASSWORD")
 
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = ["*"]
 
@@ -35,7 +34,7 @@ DATABASES = {
         "NAME": "ourjourney_authdb",
         "USER": "root",
         "PASSWORD": MYSQL_PASSWORD,
-        "HOST": "mysql_service",  # MySQL 컨테이너 이름
+        "HOST": "localhost",  # MySQL 컨테이너 이름
         "PORT": "3306",
     }
 }
