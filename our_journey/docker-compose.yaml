@@ -4,17 +4,24 @@ services:
   db:
     image: mysql
     container_name: mysql_service
-    env_file:
-      - .env
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DATABASE: ourjourney_authdb
+      TZ: Asia/Seoul
     command: mysqld --character-set-server=utf8 --collation-server=utf8_general_ci
     ports:
-      - "3306:3306"
+      - "3307:3306" # 호스트의 3307 포트를 컨테이너의 3306 포트로 매핑
+    volumes:
+      - db_data:/var/lib/mysql
     networks:
       - my_network
 
   web:
-    image: forwardyoung/our_journey_django:latest
-    container_name: django_web
+    image: forwardyoung/our_journey_auth:latest
+    container_name: backend_auth
+    environment:
+      MYSQL_HOST: mysql_service
+      MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD}
     env_file:
       - .env
     ports:
@@ -23,6 +30,9 @@ services:
       - db
     networks:
       - my_network
+
+volumes:
+  db_data:  # MySQL 데이터를 저장할 볼륨
 
 networks:
   my_network:
