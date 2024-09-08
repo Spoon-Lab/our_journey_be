@@ -12,7 +12,12 @@ from django.db import connections
 from django.http import JsonResponse, HttpResponseRedirect
 from django.shortcuts import redirect
 import jwt
-from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiResponse
+from drf_spectacular.utils import (
+    extend_schema,
+    OpenApiExample,
+    OpenApiResponse,
+    extend_schema_serializer,
+)
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
@@ -20,11 +25,19 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 
-from .serializers import CustomLoginSerializer, JWTResponseSerializer
+from .models import User
+from .serializers import (
+    CustomLoginSerializer,
+    JWTResponseSerializer,
+    UserCertificateSerializer,
+    UserSerializer,
+)
 
 
+@extend_schema_serializer(exclude_fields=["username"])
 class CustomLoginView(LoginView):
     permission_classes = (AllowAny,)
     serializer_class = CustomLoginSerializer
@@ -55,6 +68,7 @@ class CustomLoginView(LoginView):
     def post(self, request, *args, **kwargs):
         self.request = request
         self.serializer = self.get_serializer(data=self.request.data)
+
         self.serializer.is_valid(raise_exception=True)
 
         self.login()
@@ -69,47 +83,7 @@ class CustomLoginView(LoginView):
                 {"detail": _("Email verification is required to log in.")},
                 status=status.HTTP_403_FORBIDDEN,  # Forbidden 응답
             )
-
         return self.get_response()
-
-
-class GoogleAuthenticateAPIView(APIView):
-    def post(self, request):
-        token = request.data.get("token")
-
-        try:
-            # 구글 토큰 검증
-            idinfo = id_token.verify_oauth2_token(
-                token, google_requests.Request(), GOOGLE_CLIENT_ID
-            )
-
-            # 구글 사용자 ID 및 이메일 추출
-            google_user_id = idinfo["sub"]
-            email = idinfo.get("email")
-            name = idinfo.get("name")
-
-            # 이미 있는 사용자인지 확인, 없으면 생성
-            user, created = User.objects.get_or_create(
-                email=email, defaults={"username": email, "first_name": name}
-            )
-
-            if created:
-                # 새로운 사용자 생성 시 추가 작업 (예: 권한 설정)
-                user.set_unusable_password()  # 비밀번호 없이 소셜 로그인으로만 로그인 가능하게 설정
-                user.save()
-
-            # JWT 발급 또는 사용자 정보 응답
-            return Response(
-                {
-                    "message": "User authenticated successfully",
-                    "user_id": user.id,
-                    "email": user.email,
-                    "username": user.username,
-                }
-            )
-
-        except ValueError:
-            return Response({"error": "Invalid token"}, status=400)
 
 
 @login_required
@@ -133,6 +107,18 @@ class UserAuthenticationView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        responses={
+            200: OpenApiResponse(
+                response=UserCertificateSerializer,
+                description="""user certificate from main(Spring) server. Authorization is admin or generl.
+                            """,
+            ),
+            401: OpenApiResponse(
+                description="Authentication credentials were not provided."
+            ),
+        },
+    )
     def get(self, request):
         user = request.user
         token = request.auth  # 요청에서 Bearer 토큰 값
@@ -241,3 +227,79 @@ class AdminCategoryAPIView(APIView):
             return Response(
                 {"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+class GoogleLoginCallback(APIView):
+    def verify_google_token(self, id_token):
+        # Google의 토큰 검증 엔드포인트
+        google_token_info_url = (
+            f"https://oauth2.googleapis.com/tokeninfo?id_token={id_token}"
+        )
+
+        # Google에 토큰 유효성 확인 요청
+        response = requests.get(google_token_info_url)
+
+        if response.status_code == 200:
+            token_info = response.json()
+            email = token_info.get("email")
+            if token_info.get("email_verified"):
+                return email, token_info
+            else:
+                raise ValueError("Email not verified")
+        else:
+            raise ValueError("Invalid token")
+
+    def create_or_update_user(self, email, token_info):
+        try:
+            # 이미 등록된 사용자가 있는지 확인
+            user = User.objects.get(email=email)
+            print(f"User {user.email} already exists.")
+        except User.DoesNotExist:
+            # 새로운 사용자 생성
+            user = User.objects.create(
+                email=email,
+                first_name=token_info.get("given_name", ""),
+                last_name=token_info.get("family_name", ""),
+            )
+            user.set_unusable_password()  # 소셜 로그인은 비밀번호가 필요 없음
+            user.save()
+            print(f"New user {user.email} created.")
+        return user
+
+    @extend_schema(
+        request={
+            "application/json": {
+                "type": "object",
+                "properties": {"id_token": {"type": "string"}},
+            }
+        },
+        responses={
+            200: OpenApiResponse(
+                response=UserSerializer, description="social login success."
+            ),
+            400: OpenApiResponse(description="ID token is required."),
+        },
+    )
+    def post(self, request):
+        # 클라이언트에서 id_token을 받음
+        id_token = request.data.get("id_token")
+
+        if not id_token:
+            return Response(
+                {"error": "ID token is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            # Google 토큰 검증
+            email, token_info = self.verify_google_token(id_token)
+
+            # 사용자 생성 또는 업데이트
+            user = self.create_or_update_user(email, token_info)
+
+            return Response(
+                {"user_id": user.email},
+                status=status.HTTP_200_OK,
+            )
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)

@@ -4,6 +4,7 @@ from dj_rest_auth.serializers import LoginSerializer
 from django.contrib.auth import authenticate
 from rest_framework import serializers
 from django.utils.translation import gettext_lazy as _
+from .models import User
 
 
 class CustomRegisterSerializer(RegisterSerializer):
@@ -53,13 +54,20 @@ class CustomLoginSerializer(LoginSerializer):
             user = authenticate(
                 request=self.context.get("request"), email=email, password=password
             )
+            print(user)
 
             if not user:
-                msg = _("Unable to log in with provided credentials.")
-                raise serializers.ValidationError(msg, code="authorization")
+                # 사용자 객체가 없으면 자격 증명이 잘못된 것
+                if User.objects.filter(email=email).exists():
+                    raise serializers.ValidationError(
+                        {"password": _("Incorrect password. Please try again.")}
+                    )
+                else:
+                    raise serializers.ValidationError(
+                        {"email": _("No account found with this email address.")}
+                    )
         else:
-            msg = _('Must include "email" and "password".')
-            raise serializers.ValidationError(msg, code="authorization")
+            raise serializers.ValidationError(_('Must include "email" and "password".'))
 
         attrs["user"] = user
         return attrs
@@ -74,3 +82,12 @@ class JWTResponseSerializer(serializers.Serializer):
     access = serializers.CharField()
     refresh = serializers.CharField(allow_blank=True, required=False)
     user = UserSerializer()
+
+
+class UserCertificateSerializer(serializers.Serializer):
+    user_id = serializers.IntegerField()
+    email = serializers.EmailField()
+    authentication = serializers.BooleanField()
+    authorization = serializers.ChoiceField(
+        choices=[("admin", "Admin"), ("general", "General")]
+    )

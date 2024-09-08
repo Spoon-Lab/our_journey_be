@@ -80,8 +80,9 @@ WSGI_APPLICATION = "config.wsgi.application"
 SITE_ID = 4
 
 AUTHENTICATION_BACKENDS = (
+    "apps.authapp.custom_auth.EmailBackend",
     "django.contrib.auth.backends.ModelBackend",
-    "allauth.account.auth_backends.AuthenticationBackend",
+    # "allauth.account.auth_backends.AuthenticationBackend",
 )
 
 # rest-auth 회원가입 필드 custom
@@ -90,7 +91,7 @@ REST_AUTH_REGISTER_SERIALIZERS = {
 }
 
 # Allauth 설정
-LOGIN_REDIRECT_URL = "/auth/redirect/"
+LOGIN_REDIRECT_URL = "/auth/google/callback/"
 # 로그아웃 시
 ACCOUNT_LOGOUT_REDIRECT_URL = "/"
 

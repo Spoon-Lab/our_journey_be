@@ -23,7 +23,7 @@ class ImageUploadTest(APITestCase):
         refresh = RefreshToken.for_user(self.user)
         self.access_token = str(refresh.access_token)
 
-        self.url = reverse("content_image_upload")
+        self.url = reverse("image-upload")
 
         self.test_image_path = os.path.join(os.path.dirname(__file__), "test_image.png")
         with open(self.test_image_path, "wb") as f:
