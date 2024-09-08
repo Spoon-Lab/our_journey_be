@@ -34,3 +34,11 @@ class User(AbstractUser):
     REQUIRED_FIELDS = []
 
     objects = CustomUserManager()
+
+
+class Category(models.Model):
+    name = models.CharField(max_length=255)
+
+    class Meta:
+        db_table = "category"  # 외부 DB의 테이블명
+        managed = False

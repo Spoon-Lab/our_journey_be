@@ -12,7 +12,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 User = get_user_model()
 
 
-class ContentImageUploadTest(APITestCase):
+class ImageUploadTest(APITestCase):
 
     def setUp(self):
         self.user = User.objects.create_user(

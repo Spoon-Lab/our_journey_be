@@ -36,7 +36,15 @@ DATABASES = {
         "PASSWORD": MYSQL_PASSWORD,
         "HOST": "localhost",  # MySQL 컨테이너 이름
         "PORT": "3306",
-    }
+    },
+    "external_db": {
+        "ENGINE": "",  # 외부 DB 엔진
+        "NAME": "ourjourney_main_db",
+        "USER": "root",
+        "PASSWORD": "root1234",
+        "HOST": "",  # 외부 DB의 호스트 주소
+        "PORT": "3306",  # 외부 DB 포트
+    },
 }
 
 
