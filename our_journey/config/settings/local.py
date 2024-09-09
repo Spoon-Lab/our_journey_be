@@ -12,7 +12,6 @@ SECRET_KEY = env("DJANGO_SECRET_KEY")
 MYSQL_PASSWORD = env("MYSQL_PASSWORD")
 
 DEBUG = True
-
 ALLOWED_HOSTS = ["*"]
 
 
@@ -38,11 +37,11 @@ DATABASES = {
         "PORT": "3306",
     },
     "external_db": {
-        "ENGINE": "",  # 외부 DB 엔진
+        "ENGINE": "django.db.backends.mysql",  # 외부 DB 엔진
         "NAME": "ourjourney_main_db",
         "USER": "root",
         "PASSWORD": "root1234",
-        "HOST": "",  # 외부 DB의 호스트 주소
+        "HOST": "mysql_service",  # 외부 DB의 호스트 주소
         "PORT": "3306",  # 외부 DB 포트
     },
 }

@@ -23,6 +23,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework.authtoken",
     "rest_framework_simplejwt",
+    "rest_framework_simplejwt.token_blacklist",
     "dj_rest_auth",
     "dj_rest_auth.registration",
     "drf_spectacular",
@@ -149,18 +150,22 @@ REST_FRAMEWORK = {
 
 REST_AUTH = {
     "USE_JWT": True,
+    "JWT_AUTH_COOKIE": "access",
+    "JWT_AUTH_REFRESH_COOKIE": "refresh_token",
+    "JWT_AUTH_HTTPONLY": True,
+    "SESSION_LOGIN": False,
 }
 
 
-JWT_AUTH_COOKIE = "api-auth"
-JWT_AUTH_REFRESH_COOKIE = "api-refresh-token"
-
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=10),  # Access 토큰 유효기간
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5),  # Access 토큰 유효기간
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),  # Refresh 토큰 유효기간
-    "ROTATE_REFRESH_TOKENS": True,  # Refresh 토큰이 새로 발급될 때마다 갱신
+    "ROTATE_REFRESH_TOKENS": False,
     "BLACKLIST_AFTER_ROTATION": True,  # 이전에 사용된 Refresh 토큰을 블랙리스트에 추가
+    "AUTH_COOKIE_SECURE": True,  # 프로덕션 환경에서는 반드시 True로 설정
     "AUTH_HEADER_TYPES": ("Bearer",),
+    # "AUTH_COOKIE_HTTP_ONLY": True,  # 클라이언트 자바스크립트에서 접근 불가
+    "AUTH_COOKIE_PATH": "/",  # 쿠키의 유효 경로
 }
 
 REST_AUTH_SERIALIZERS = {
@@ -195,7 +200,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-S3_URI = "https://ourjourney-bucket.s3.ap-northeast-2.amazonaws.com"
+S3_URI = "https://spoon-ourjourney.s3.ap-northeast-2.amazonaws.com"
 
 S3_BUCKET_NAME = env["S3_BUCKET_NAME"]
 S3_ACCESS_KEY = env["S3_ACCESS_KEY"]
@@ -205,7 +210,7 @@ S3_SECRET_KEY = env["S3_SECRET_KEY"]
 
 LANGUAGE_CODE = "ko-kr"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "Asia/Seoul"
 
 USE_I18N = True
 
