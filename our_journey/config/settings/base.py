@@ -170,8 +170,8 @@ REST_AUTH_SERIALIZERS = {
 }
 
 SPECTACULAR_SETTINGS = {
-    "TITLE": "Our Journey Django API",
-    "DESCRIPTION": "Your project description",
+    "TITLE": "Our Journey Auth API",
+    "DESCRIPTION": "",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
     # OTHER SETTINGS
@@ -195,7 +195,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-S3_URI = "https://lmderp.s3.ap-northeast-2.amazonaws.com"
+S3_URI = "https://ourjourney-bucket.s3.ap-northeast-2.amazonaws.com"
 
 S3_BUCKET_NAME = env["S3_BUCKET_NAME"]
 S3_ACCESS_KEY = env["S3_ACCESS_KEY"]
