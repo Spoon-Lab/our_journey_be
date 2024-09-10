@@ -1,5 +1,6 @@
 import os
-from datetime import timedelta
+import sys
+from datetime import timedelta, datetime
 from pathlib import Path
 from .manage_secret.local import read_env
 
@@ -13,6 +14,8 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django.contrib.sites",
+    "apps.authapp",
+    "apps.photoapp",
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
@@ -20,10 +23,10 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework.authtoken",
     "rest_framework_simplejwt",
+    "rest_framework_simplejwt.token_blacklist",
     "dj_rest_auth",
     "dj_rest_auth.registration",
     "drf_spectacular",
-    "apps.authapp",
 ]
 
 MIDDLEWARE = [
@@ -36,6 +39,8 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
 ]
+
+ROOT_URLCONF = "config.urls"
 
 env = read_env(base_dir=BASE_DIR)
 
@@ -76,8 +81,9 @@ WSGI_APPLICATION = "config.wsgi.application"
 SITE_ID = 4
 
 AUTHENTICATION_BACKENDS = (
+    "apps.authapp.custom_auth.EmailBackend",
     "django.contrib.auth.backends.ModelBackend",
-    "allauth.account.auth_backends.AuthenticationBackend",
+    # "allauth.account.auth_backends.AuthenticationBackend",
 )
 
 # rest-auth 회원가입 필드 custom
@@ -86,13 +92,12 @@ REST_AUTH_REGISTER_SERIALIZERS = {
 }
 
 # Allauth 설정
-LOGIN_REDIRECT_URL = "/auth/redirect/"
+LOGIN_REDIRECT_URL = "/auth/google/callback/"
 # 로그아웃 시
 ACCOUNT_LOGOUT_REDIRECT_URL = "/"
 
 AUTH_USER_MODEL = "authapp.User"
 
-REST_USE_JWT = True
 
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = "smtp.gmail.com"
@@ -136,24 +141,42 @@ TEMPLATES = [
 ]
 
 REST_FRAMEWORK = {
-    # jwt 인가 setting
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        # "dj_rest_auth.jwt_auth.JWTCookieAuthentication",
+        "rest_framework_simplejwt.authentication.JWTAuthentication",  # JWT 인증 클래스 우선
     ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
+REST_AUTH = {
+    "USE_JWT": True,
+    "JWT_AUTH_COOKIE": "access",
+    "JWT_AUTH_REFRESH_COOKIE": "refresh_token",
+    "JWT_AUTH_HTTPONLY": True,
+    "SESSION_LOGIN": False,
+}
+
+
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=3),
-    "ROTATE_REFRESH_TOKENS": True,
-    "BLACKLIST_AFTER_ROTATION": False,
-    "SIGNING_KEY": DJANGO_SECRET_KEY,
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5),  # Access 토큰 유효기간
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),  # Refresh 토큰 유효기간
+    "ROTATE_REFRESH_TOKENS": False,
+    "BLACKLIST_AFTER_ROTATION": True,  # 이전에 사용된 Refresh 토큰을 블랙리스트에 추가
+    "AUTH_COOKIE_SECURE": True,  # 프로덕션 환경에서는 반드시 True로 설정
+    "AUTH_HEADER_TYPES": ("Bearer",),
+    # "AUTH_COOKIE_HTTP_ONLY": True,  # 클라이언트 자바스크립트에서 접근 불가
+    "AUTH_COOKIE_PATH": "/",  # 쿠키의 유효 경로
+}
+
+REST_AUTH_SERIALIZERS = {
+    "TOKEN_SERIALIZER": "dj_rest_auth.serializers.JWTSerializer",
+    "REGISTER_SERIALIZER": "apps.authapp.serializers.CustomRegisterSerializer",
+    "LOGIN_SERIALIZER": "apps.authapp.serializers.CustomLoginSerializer",
 }
 
 SPECTACULAR_SETTINGS = {
-    "TITLE": "Our Journey Django API",
-    "DESCRIPTION": "Your project description",
+    "TITLE": "Our Journey Auth API",
+    "DESCRIPTION": "",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
     # OTHER SETTINGS
@@ -177,12 +200,17 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+S3_URI = "https://spoon-ourjourney.s3.ap-northeast-2.amazonaws.com"
+
+S3_BUCKET_NAME = env["S3_BUCKET_NAME"]
+S3_ACCESS_KEY = env["S3_ACCESS_KEY"]
+S3_SECRET_KEY = env["S3_SECRET_KEY"]
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 
 LANGUAGE_CODE = "ko-kr"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "Asia/Seoul"
 
 USE_I18N = True
 
