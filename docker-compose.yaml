@@ -31,14 +31,14 @@
       networks:
         - my_network
 
-    nginx:
-        image: nginx:latest
-        ports:
-          - "80:80"
-        volumes:
-          - ./nginx/nginx.conf:etc/nginx/nginx.conf # 로컬 nginx.conf 파일을 컨테이너 내부로 마운트
-        depends_on:
-          - web # 웹 서비스와 의존 관계
+#    nginx:
+#        image: nginx:latest
+#        ports:
+#          - "80:80"
+#        volumes:
+#          - ./nginx/nginx.conf:etc/nginx/nginx.conf # 로컬 nginx.conf 파일을 컨테이너 내부로 마운트
+#        depends_on:
+#          - web # 웹 서비스와 의존 관계
   volumes:
     db_data:  # MySQL 데이터를 저장할 볼륨
 

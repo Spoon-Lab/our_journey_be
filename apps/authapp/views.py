@@ -38,7 +38,7 @@ from .serializers import (
 
 
 @extend_schema_serializer(exclude_fields=["username"])
-class CustomLoginView(LoginView):
+class OurLoginView(LoginView):
     permission_classes = (AllowAny,)
     serializer_class = CustomLoginSerializer
 
@@ -303,3 +303,19 @@ class GoogleLoginCallback(APIView):
             )
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PasswordResetRequestView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        return Response()
+
+
+class PasswordResetConfirmView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        return Response()

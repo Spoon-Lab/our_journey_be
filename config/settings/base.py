@@ -98,7 +98,6 @@ ACCOUNT_LOGOUT_REDIRECT_URL = "/"
 
 AUTH_USER_MODEL = "authapp.User"
 
-
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = "587"
@@ -158,7 +157,7 @@ REST_AUTH = {
 
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5),  # Access 토큰 유효기간
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),  # Access 토큰 유효기간
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),  # Refresh 토큰 유효기간
     "ROTATE_REFRESH_TOKENS": False,
     "BLACKLIST_AFTER_ROTATION": True,  # 이전에 사용된 Refresh 토큰을 블랙리스트에 추가
