@@ -348,6 +348,7 @@ class PasswordResetRequestView(APIView):
 
 
 class PasswordResetConfirmView(PasswordChangeView):
+    permission_classes = [AllowAny]
 
     def post(self, request, uidb64, token, *args, **kwargs):
         try:
