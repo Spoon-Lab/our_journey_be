@@ -4,14 +4,20 @@ from allauth.account.models import (
     EmailConfirmationHMAC,
     EmailAddress,
 )
-from dj_rest_auth.views import LoginView
+from dj_rest_auth.views import LoginView, PasswordChangeView
 from django.conf import settings
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.tokens import default_token_generator
+from django.core.mail import send_mail
 from django.db import connections
 from django.http import JsonResponse, HttpResponseRedirect
 from django.shortcuts import redirect
 import jwt
+from django.template.loader import render_to_string
+from django.utils.encoding import force_bytes
+from django.urls import reverse
+from django.utils.http import urlsafe_base64_encode
 from drf_spectacular.utils import (
     extend_schema,
     OpenApiExample,
@@ -310,12 +316,33 @@ class PasswordResetRequestView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
-        return Response()
+        print(self.request.user.id)
+        # 비밀번호 재설정 링크 토큰 설정
+        uid = urlsafe_base64_encode(force_bytes(self.request.user.id))
+        token = default_token_generator.make_token(self.request.user)
+        print(uid)
+        print(token)
+
+        # 재설정 url (frontend url)
+        # reset_url = f"{request.build_absolute_uri(reverse('password-reset-confirm', args=[uid, token]))}"
+        reset_url = f"http://localhost:8000/auth/password/reset/confirm/{uid}/{token}/"
+        # 이메일 내용
+        subject = "Our Journey에서 비밀번호 재설정"
+        message = f"안녕하세요,\n\n다음 링크를 통해 비밀번호를 재설정할 수 있습니다:\n{reset_url}새 비밀번호를 요청하지 않으셨나요? 이 이메일을 무시해주세요."
+
+        # 이메일 발송
+        send_mail(
+            subject, message, settings.DEFAULT_FROM_EMAIL, [self.request.user.email]
+        )
+
+        return Response(
+            {"message": "Password reset email sent."}, status=status.HTTP_200_OK
+        )
 
 
-class PasswordResetConfirmView(APIView):
+class PasswordResetConfirmView(PasswordChangeView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request, uidb64, token, *args, **kwargs):
         return Response()
