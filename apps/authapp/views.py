@@ -17,7 +17,7 @@ import jwt
 from django.template.loader import render_to_string
 from django.utils.encoding import force_bytes
 from django.urls import reverse
-from django.utils.http import urlsafe_base64_encode
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from drf_spectacular.utils import (
     extend_schema,
     OpenApiExample,
@@ -345,4 +345,33 @@ class PasswordResetConfirmView(PasswordChangeView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, uidb64, token, *args, **kwargs):
-        return Response()
+        try:
+            # uidb64 디코딩으로 user id값 확인
+            uid = urlsafe_base64_decode(uidb64).decode()
+            user = User.objects.get(pk=uid)
+
+        # User 데이터베이스에 id 값이 없을 때
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+            return Response(
+                {"error": "Invalid uid"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # 재설정을 요청하는 유저와 토큰값이 일치한지 확인
+        if not default_token_generator.check_token(user, token):
+
+            return Response(
+                {"error": "Invalid token or token is expired."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # 기존 비밀번호 재설정 로직 이용
+        serializer = self.get_serializer(data=request.data)
+
+        if serializer.is_valid():
+            # 비밀번호 변경
+            user.set_password(serializer.validated_data["new_password1"])
+            user.save()
+            return Response(
+                {"detail": "New password has been saved."}, status=status.HTTP_200_OK
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
