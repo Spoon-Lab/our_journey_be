@@ -1,3 +1,5 @@
+import django.core.mail
+
 from .base import *
 
 import environ
@@ -11,7 +13,7 @@ SECRET_KEY = env("DJANGO_SECRET_KEY")
 
 MYSQL_PASSWORD = env("MYSQL_PASSWORD")
 
-DEBUG = True
+DEBUG = False
 ALLOWED_HOSTS = ["*"]
 
 

@@ -4,14 +4,20 @@ from allauth.account.models import (
     EmailConfirmationHMAC,
     EmailAddress,
 )
-from dj_rest_auth.views import LoginView
+from dj_rest_auth.views import LoginView, PasswordChangeView
 from django.conf import settings
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.tokens import default_token_generator
+from django.core.mail import send_mail
 from django.db import connections
 from django.http import JsonResponse, HttpResponseRedirect
 from django.shortcuts import redirect
 import jwt
+from django.template.loader import render_to_string
+from django.utils.encoding import force_bytes
+from django.urls import reverse
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from drf_spectacular.utils import (
     extend_schema,
     OpenApiExample,
@@ -38,7 +44,7 @@ from .serializers import (
 
 
 @extend_schema_serializer(exclude_fields=["username"])
-class CustomLoginView(LoginView):
+class OurLoginView(LoginView):
     permission_classes = (AllowAny,)
     serializer_class = CustomLoginSerializer
 
@@ -303,3 +309,69 @@ class GoogleLoginCallback(APIView):
             )
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PasswordResetRequestView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        print(self.request.user.id)
+        # 비밀번호 재설정 링크 토큰 설정
+        uid = urlsafe_base64_encode(force_bytes(self.request.user.id))
+        token = default_token_generator.make_token(self.request.user)
+        print(uid)
+        print(token)
+
+        # 재설정 url (frontend url)
+        # reset_url = f"{request.build_absolute_uri(reverse('password-reset-confirm', args=[uid, token]))}"
+        reset_url = f"http://localhost:8000/auth/password/reset/confirm/{uid}/{token}/"
+        # 이메일 내용
+        subject = "Our Journey에서 비밀번호 재설정"
+        message = f"안녕하세요,\n\n다음 링크를 통해 비밀번호를 재설정할 수 있습니다:\n{reset_url}새 비밀번호를 요청하지 않으셨나요? 이 이메일을 무시해주세요."
+
+        # 이메일 발송
+        send_mail(
+            subject, message, settings.DEFAULT_FROM_EMAIL, [self.request.user.email]
+        )
+
+        return Response(
+            {"message": "Password reset email sent."}, status=status.HTTP_200_OK
+        )
+
+
+class PasswordResetConfirmView(PasswordChangeView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, uidb64, token, *args, **kwargs):
+        try:
+            # uidb64 디코딩으로 user id값 확인
+            uid = urlsafe_base64_decode(uidb64).decode()
+            user = User.objects.get(pk=uid)
+
+        # User 데이터베이스에 id 값이 없을 때
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+            return Response(
+                {"error": "Invalid uid"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # 재설정을 요청하는 유저와 토큰값이 일치한지 확인
+        if not default_token_generator.check_token(user, token):
+
+            return Response(
+                {"error": "Invalid token or token is expired."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # 기존 비밀번호 재설정 로직 이용
+        serializer = self.get_serializer(data=request.data)
+
+        if serializer.is_valid():
+            # 비밀번호 변경
+            user.set_password(serializer.validated_data["new_password1"])
+            user.save()
+            return Response(
+                {"detail": "New password has been saved."}, status=status.HTTP_200_OK
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
