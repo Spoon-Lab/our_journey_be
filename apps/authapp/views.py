@@ -312,16 +312,25 @@ class GoogleLoginCallback(APIView):
 
 
 class PasswordResetRequestView(APIView):
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
-        print(self.request.user.id)
+
+        email = request.data.get("email")
+        if not email:
+            return Response(
+                {"error": "Email is required."}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response(
+                {"error": "User does not exist."}, status=status.HTTP_400_BAD_REQUEST
+            )
+
         # 비밀번호 재설정 링크 토큰 설정
-        uid = urlsafe_base64_encode(force_bytes(self.request.user.id))
-        token = default_token_generator.make_token(self.request.user)
-        print(uid)
-        print(token)
+        uid = urlsafe_base64_encode(force_bytes(user.id))
+        token = default_token_generator.make_token(user)
 
         # 재설정 url (frontend url)
         # reset_url = f"{request.build_absolute_uri(reverse('password-reset-confirm', args=[uid, token]))}"
@@ -331,9 +340,7 @@ class PasswordResetRequestView(APIView):
         message = f"안녕하세요,\n\n다음 링크를 통해 비밀번호를 재설정할 수 있습니다:\n{reset_url}새 비밀번호를 요청하지 않으셨나요? 이 이메일을 무시해주세요."
 
         # 이메일 발송
-        send_mail(
-            subject, message, settings.DEFAULT_FROM_EMAIL, [self.request.user.email]
-        )
+        send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [email])
 
         return Response(
             {"message": "Password reset email sent."}, status=status.HTTP_200_OK
@@ -341,8 +348,7 @@ class PasswordResetRequestView(APIView):
 
 
 class PasswordResetConfirmView(PasswordChangeView):
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def post(self, request, uidb64, token, *args, **kwargs):
         try:
