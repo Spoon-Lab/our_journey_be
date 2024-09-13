@@ -11,12 +11,12 @@ COPY requirements.txt /requirements.txt
 RUN pip3 install -r requirements.txt
 
 WORKDIR /home/our_journey/
-COPY our_journey .
+COPY . .
 
 EXPOSE 8000
 
 # MySQL이 준비될 때까지 대기 후 Django 명령어
-CMD ["bash", "-c", "/wait-for-it.sh localhost:3306 -- python3 manage.py collectstatic --noinput --settings=config.settings.local &&\
+CMD ["bash", "-c", "/wait-for-it.sh mysql_service:3306 -- python3 manage.py collectstatic --noinput --settings=config.settings.local &&\
      python3 manage.py migrate --settings=config.settings.local &&\
      gunicorn config.wsgi --env DJANGO_SETTINGS_MODULE=config.settings.local --bind 0.0.0.0:8000 --workers=3 --timeout 180"]
 

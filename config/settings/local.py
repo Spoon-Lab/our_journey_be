@@ -1,10 +1,11 @@
-import django.core.mail
+import environ
 
 from .base import *
 
-import environ
-
 env = environ.Env(DEBUG=(bool, False))
+
+
+DEBUG = False
 
 # 환경변수 파일 읽어오기
 environ.Env.read_env(env_file=os.path.join(BASE_DIR, ".env"))
@@ -13,8 +14,7 @@ SECRET_KEY = env("DJANGO_SECRET_KEY")
 
 MYSQL_PASSWORD = env("MYSQL_PASSWORD")
 
-DEBUG = False
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = ["https://z7wukbztzj.execute-api.ap-northeast-2.amazonaws.com", "*"]
 
 
 CSRF_TRUSTED_ORIGINS = [
@@ -32,22 +32,34 @@ CORS_ORIGIN_ALLOW_ALL = True
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
-        "NAME": "ourjourney_authdb",
+        "NAME": "ourjourney_auth_db",
         "USER": "root",
         "PASSWORD": MYSQL_PASSWORD,
-        "HOST": "localhost",  # MySQL 컨테이너 이름
+        "HOST": "ourjourney-be-auth-db.cfkuy0m0a1v2.ap-northeast-2.rds.amazonaws.com",  # MySQL 컨테이너 이름
+        # "HOST": "localhost",
         "PORT": "3306",
-    },
-    "external_db": {
-        "ENGINE": "django.db.backends.mysql",  # 외부 DB 엔진
-        "NAME": "ourjourney_main_db",
-        "USER": "root",
-        "PASSWORD": "root1234",
-        "HOST": "mysql_service",  # 외부 DB의 호스트 주소
-        "PORT": "3306",  # 외부 DB 포트
-    },
+    }
 }
 
+CLIENT_ID = env("CLIENT_ID")
+GOOGLE_SECRET = env("GOOGLE_SECRET")
+EMAIL_HOST_USER = env("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+S3_BUCKET_NAME = env("S3_BUCKET_NAME")
+S3_ACCESS_KEY = env("S3_ACCESS_KEY")
+S3_SECRET_KEY = env("S3_SECRET_KEY")
+
+# 구글 OAuth2 설정
+SOCIALACCOUNT_PROVIDERS = {
+    "google": {
+        "SCOPE": ["profile", "email"],
+        "AUTH_PARAMS": {"access_type": "online"},
+        "CLIENT_ID": CLIENT_ID,
+        "SECRET": GOOGLE_SECRET,
+    }
+}
 
 if DEBUG:
     STATICFILES_DIRS = [

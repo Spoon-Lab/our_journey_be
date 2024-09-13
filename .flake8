@@ -1,5 +1,5 @@
 [flake8]
-max-line-length = 79  # PEP 8 권장 줄 길이
+max-line-length = 88 # black과 충돌할 수 있어서 88 이상으로 수정
 ignore = E203, W503  # 선택 사항: 필요에 따라 무시할 규칙 추가
 exclude =
     .git,

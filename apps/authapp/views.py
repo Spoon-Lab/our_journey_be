@@ -1,48 +1,54 @@
 import requests
 from allauth.account.models import (
+    EmailAddress,
     EmailConfirmation,
     EmailConfirmationHMAC,
-    EmailAddress,
 )
-from dj_rest_auth.views import LoginView, PasswordChangeView
+from dj_rest_auth.registration.views import RegisterView
+from dj_rest_auth.views import LoginView, LogoutView, PasswordChangeView
 from django.conf import settings
-from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.db import connections
-from django.http import JsonResponse, HttpResponseRedirect
-from django.shortcuts import redirect
-import jwt
-from django.template.loader import render_to_string
+from django.http import HttpResponseRedirect, JsonResponse
 from django.utils.encoding import force_bytes
-from django.urls import reverse
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
+from django.utils.translation import gettext_lazy as _
 from drf_spectacular.utils import (
-    extend_schema,
     OpenApiExample,
+    OpenApiParameter,
     OpenApiResponse,
+    extend_schema,
     extend_schema_serializer,
 )
 from rest_framework import status
-from rest_framework.decorators import api_view
-from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
+from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework.exceptions import ValidationError
-from django.utils.translation import gettext_lazy as _
+from rest_framework_simplejwt.views import TokenRefreshView
+
+from config.utils import unauthorized_response
 
 from .models import User
 from .serializers import (
     CustomLoginSerializer,
+    CustomRegisterSerializer,
     JWTResponseSerializer,
     UserCertificateSerializer,
     UserSerializer,
 )
 
 
+@extend_schema(tags=["User Registration"])
+@extend_schema_serializer(exclude_fields=["username"])
+class CustomRegisterView(RegisterView):
+    serializer_class = CustomRegisterSerializer
+
+
+@extend_schema(tags=["User Login"])
 @extend_schema_serializer(exclude_fields=["username"])
 class OurLoginView(LoginView):
     permission_classes = (AllowAny,)
@@ -65,9 +71,50 @@ class OurLoginView(LoginView):
             200: OpenApiResponse(
                 response=JWTResponseSerializer, description="JWT login response"
             ),
-            400: OpenApiResponse(description="Invalid credentials or validation error"),
+            400: OpenApiResponse(
+                response={
+                    "type": "object",
+                    "properties": {
+                        "detail": {
+                            "type": "string",
+                            "nullable": True,  # 선택적일 수 있음
+                            "example": "Email verification is required to log in.",
+                        },
+                        "email": {
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "example": "No account found with this email address.",
+                            },
+                            "nullable": True,  # 선택적일 수 있음
+                        },
+                    },
+                },
+                examples=[
+                    OpenApiExample(
+                        name="Email verification required",
+                        summary="로그인 전에 이메일 인증이 필요할 때",
+                        value={"detail": "Email verification is required to log in."},
+                    ),
+                    OpenApiExample(
+                        name="No account found",
+                        summary="계정이 존재하지 않을 때",
+                        value={"email": ["No account found with this email address."]},
+                    ),
+                ],
+                description="Invalid email or email verification required.",
+            ),
             403: OpenApiResponse(
-                description="Email verification is required to log in."
+                response={
+                    "type": "object",
+                    "properties": {
+                        "detail": {
+                            "type": "string",
+                            "example": "Email verification is required to log in.",
+                        }
+                    },
+                },
+                description="Email verification is required to log in.",
             ),
         },
     )
@@ -92,6 +139,50 @@ class OurLoginView(LoginView):
         return self.get_response()
 
 
+class OurLogoutView(LogoutView):
+    @extend_schema(
+        tags=["User Logout"],
+        parameters=[
+            OpenApiParameter(
+                name="refresh_token",
+                description="The refresh token stored in the cookie for authentication.",
+                required=True,
+                type=str,
+                location=OpenApiParameter.COOKIE,  # 쿠키 파라미터임을 명시
+            )
+        ],
+        responses={
+            200: OpenApiResponse(
+                response={
+                    "type": "object",
+                    "properties": {
+                        "detail": {
+                            "type": "string",
+                            "example": "로그아웃되었습니다.",
+                        }
+                    },
+                },
+                description="Logout Success",
+            ),
+            401: OpenApiResponse(
+                response={
+                    "type": "object",
+                    "properties": {
+                        "detail": {
+                            "type": "string",
+                            "example": "Refresh token was not included in cookie data.",
+                        }
+                    },
+                },
+                description="Refresh token was not included in cookie data.",
+            ),
+        },
+    )
+    def post(self, request, *args, **kwargs):
+        # 기본 토큰 갱신 동작을 그대로 호출
+        return super().post(request, *args, **kwargs)
+
+
 @login_required
 def auth_redirect_view(request):
     user = request.user
@@ -114,15 +205,15 @@ class UserAuthenticationView(APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
+        tags=["User Authenticate"],
+        description="Spring server can request and be returned user data.",
         responses={
             200: OpenApiResponse(
                 response=UserCertificateSerializer,
                 description="""user certificate from main(Spring) server. Authorization is admin or generl.
                             """,
             ),
-            401: OpenApiResponse(
-                description="Authentication credentials were not provided."
-            ),
+            401: unauthorized_response(),
         },
     )
     def get(self, request):
@@ -235,6 +326,70 @@ class AdminCategoryAPIView(APIView):
             )
 
 
+class CustomTokenRefreshView(TokenRefreshView):
+    @extend_schema(
+        tags=["refresh Access token"],
+        request={
+            "application/json": {
+                "type": "object",
+                "properties": {"refresh": {"type": "string"}},
+            }
+        },
+        responses={
+            200: OpenApiResponse(
+                response={
+                    "type": "object",
+                    "properties": {
+                        "access": {"type": "string"},
+                    },
+                },
+                examples=[
+                    OpenApiExample(
+                        name="Success Example",
+                        summary="This is an example of a successful token refresh response.",
+                        value={"access": "string"},
+                    )
+                ],
+                description="New access token here.",
+            ),
+            400: OpenApiResponse(
+                response={
+                    "type": "object",
+                    "properties": {
+                        "refresh": {
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "example": "이 필드는 필수 항목입니다.",
+                            },
+                        }
+                    },
+                },
+                description="This field is required.",
+            ),
+            401: OpenApiResponse(
+                response={
+                    "type": "object",
+                    "properties": {
+                        "detail": {
+                            "type": "string",
+                            "example": "유효하지 않거나 만료된 토큰입니다",  # 구체적인 예시 추가
+                        },
+                        "code": {
+                            "type": "string",
+                            "example": "token_not_valid",  # 구체적인 예시 추가
+                        },
+                    },
+                },
+                description="Invalid token or token is expired.",
+            ),
+        },
+    )
+    def post(self, request, *args, **kwargs):
+        # 기본 토큰 갱신 동작을 그대로 호출
+        return super().post(request, *args, **kwargs)
+
+
 class GoogleLoginCallback(APIView):
     def verify_google_token(self, id_token):
         # Google의 토큰 검증 엔드포인트
@@ -259,7 +414,6 @@ class GoogleLoginCallback(APIView):
         try:
             # 이미 등록된 사용자가 있는지 확인
             user = User.objects.get(email=email)
-            print(f"User {user.email} already exists.")
         except User.DoesNotExist:
             # 새로운 사용자 생성
             user = User.objects.create(
@@ -269,10 +423,10 @@ class GoogleLoginCallback(APIView):
             )
             user.set_unusable_password()  # 소셜 로그인은 비밀번호가 필요 없음
             user.save()
-            print(f"New user {user.email} created.")
         return user
 
     @extend_schema(
+        tags=["Google Social Login Callback API"],
         request={
             "application/json": {
                 "type": "object",
@@ -283,7 +437,20 @@ class GoogleLoginCallback(APIView):
             200: OpenApiResponse(
                 response=UserSerializer, description="social login success."
             ),
-            400: OpenApiResponse(description="ID token is required."),
+            400: OpenApiResponse(
+                response={
+                    "type": "string",
+                    "properties": {"detail": {"type": "string"}},
+                },
+                examples=[
+                    OpenApiExample(
+                        name="ID token value none",
+                        summary="ID token 값이 전달되지 않음",
+                        value={"error": "ID token is required."},
+                    )
+                ],
+                description="ID token is required.",
+            ),
         },
     )
     def post(self, request):
@@ -312,7 +479,44 @@ class GoogleLoginCallback(APIView):
 
 
 class PasswordResetRequestView(APIView):
-
+    @extend_schema(
+        tags=["Password Reset Email Request"],
+        description="User can require password reset email without login.",
+        request={
+            "application/json": {
+                "type": "object",
+                "properties": {"email": {"type": "string"}},
+            }
+        },
+        responses={
+            200: OpenApiResponse(
+                description="비밀번호 재설정 메일이 전송됨",
+            ),
+            400: OpenApiResponse(
+                response={
+                    "type": "object",
+                    "properties": {
+                        "error": {
+                            "type": "string",
+                        }
+                    },
+                },
+                examples=[
+                    OpenApiExample(
+                        name="User not found",
+                        summary="유저가 존재하지 않을 때의 응답",
+                        value={"error": "User does not exist."},
+                    ),
+                    OpenApiExample(
+                        name="Email required",
+                        summary="이메일이 제공되지 않았을 때의 응답",
+                        value={"error": "Email is required."},  # 다른 예시 데이터
+                    ),
+                ],
+                description="Email is required or User does not exist.",
+            ),
+        },
+    )
     def post(self, request, *args, **kwargs):
 
         email = request.data.get("email")
@@ -342,14 +546,21 @@ class PasswordResetRequestView(APIView):
         # 이메일 발송
         send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [email])
 
-        return Response(
-            {"message": "Password reset email sent."}, status=status.HTTP_200_OK
-        )
+        return Response(status=status.HTTP_200_OK)
 
 
 class PasswordResetConfirmView(PasswordChangeView):
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        tags=["Password Reset Confirm"],
+        description="User can change password with uid and token data.",
+        responses={
+            200: OpenApiResponse(description="New password has been saved."),
+            400: OpenApiResponse(examples={"error": ""}),
+            401: unauthorized_response(),
+        },
+    )
     def post(self, request, uidb64, token, *args, **kwargs):
         try:
             # uidb64 디코딩으로 user id값 확인
@@ -377,7 +588,5 @@ class PasswordResetConfirmView(PasswordChangeView):
             # 비밀번호 변경
             user.set_password(serializer.validated_data["new_password1"])
             user.save()
-            return Response(
-                {"detail": "New password has been saved."}, status=status.HTTP_200_OK
-            )
+            return Response(status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

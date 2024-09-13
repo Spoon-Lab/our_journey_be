@@ -1,14 +1,14 @@
-from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import extend_schema, OpenApiResponse
+from django.utils.translation import gettext_lazy as _
+from drf_spectacular.utils import OpenApiExample, OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from django.utils.translation import gettext_lazy as _
-from .utils import *
 
+from config.utils import unauthorized_response
 from .serializers import ImageUrlSerializer
+from .utils import *
 
 
 class ImageUploadAPIView(APIView):
@@ -66,6 +66,7 @@ class ImageUploadAPIView(APIView):
         return image_urls
 
     @extend_schema(
+        tags=["Image Upload"],
         request={
             "multipart/form-data": {
                 "type": "object",
@@ -87,10 +88,38 @@ class ImageUploadAPIView(APIView):
             201: OpenApiResponse(
                 response=ImageUrlSerializer, description="Images successfully uploaded."
             ),
-            400: OpenApiResponse(description="Invalid credentials or validation error"),
+            400: OpenApiResponse(
+                response={
+                    "type": "object",
+                    "properties": {
+                        "detail": {"type": "string"},
+                        "code": {"type": "string"},
+                    },
+                },
+                examples=[
+                    OpenApiExample(
+                        name="Missing photo_type",
+                        summary="photo_type 값이 전달되지 않음",
+                        value={"detail": "photo_type is required."},
+                    ),
+                    OpenApiExample(
+                        name="Missing thread_id",
+                        summary="photo_type이 'thread'인데 thread_id값이 없음",
+                        value={
+                            "detail": "thread_id is required when photo_type is 'thread'."
+                        },
+                    ),
+                    OpenApiExample(
+                        name="Missing image file",
+                        summary="이미지 파일이 전달되지 않음",
+                        value={"detail": "Image file must be provided."},
+                    ),
+                ],
+                description="Bad request due to missing or incorrect parameters.",
+            ),
+            401: unauthorized_response(),
         },
         description="Upload images to S3 for user profile or thread image",
-        summary="Image Upload",
     )
     def post(self, request):
         user_id = request.user.id
@@ -126,6 +155,7 @@ class ImageUploadAPIView(APIView):
         )
 
     @extend_schema(
+        tags=["Image Upload"],
         request={
             "multipart/form-data": {
                 "type": "object",
@@ -144,13 +174,41 @@ class ImageUploadAPIView(APIView):
             }
         },
         responses={
-            200: OpenApiResponse(
-                response=ImageUrlSerializer, description="Images successfully updated."
+            201: OpenApiResponse(
+                response=ImageUrlSerializer, description="Images successfully uploaded."
             ),
-            400: OpenApiResponse(description="Invalid credentials or validation error"),
+            400: OpenApiResponse(
+                response={
+                    "type": "object",
+                    "properties": {
+                        "detail": {"type": "string"},
+                        "code": {"type": "string"},
+                    },
+                },
+                examples=[
+                    OpenApiExample(
+                        name="Missing photo_type",
+                        summary="photo_type 값이 전달되지 않음",
+                        value={"detail": "photo_type is required."},
+                    ),
+                    OpenApiExample(
+                        name="Missing thread_id",
+                        summary="photo_type이 'thread'인데 thread_id값이 없음",
+                        value={
+                            "detail": "thread_id is required when photo_type is 'thread'."
+                        },
+                    ),
+                    OpenApiExample(
+                        name="Missing image file",
+                        summary="이미지 파일이 전달되지 않음",
+                        value={"detail": "Image file must be provided."},
+                    ),
+                ],
+                description="Bad request due to missing or incorrect parameters.",
+            ),
+            401: unauthorized_response(),
         },
-        description="Update images to S3 for user profile or thread image",
-        summary="Image Upload",
+        description="Upload images to S3 for user profile or thread image",
     )
     def put(self, request):
         user_id = request.user.id
