@@ -3,6 +3,7 @@ from django.urls import include, path, re_path
 
 from .views import (
     ConfirmEmailView,
+    CustomRegisterView,
     CustomTokenRefreshView,
     GoogleLoginCallback,
     OurLoginView,
@@ -16,7 +17,7 @@ from .views import (
 urlpatterns = [
     # path("", include("dj_rest_auth.urls")),
     # path("signup/", include("dj_rest_auth.registration.urls")),
-    # path("signup/", CustomRegisterView.as_view(), name="signup"),
+    path("signup/", CustomRegisterView.as_view(), name="signup"),
     path("social/", include("allauth.urls")),
     path("login/", OurLoginView.as_view(), name="login"),
     path("logout/", OurLogoutView.as_view(), name="logout"),

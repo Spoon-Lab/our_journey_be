@@ -42,7 +42,78 @@ from .serializers import (
 )
 
 
-@extend_schema(tags=["User Registration"])
+@extend_schema(
+    tags=["User Registration"],
+    responses={
+        200: OpenApiResponse(
+            response={
+                "type": "object",
+                "properties": {
+                    "detail": {
+                        "type": "string",
+                        "example": "확인 이메일을 발송했습니다.",
+                    }
+                },
+            }
+        ),
+        400: OpenApiResponse(
+            response={
+                "type": "object",
+                "properties": {
+                    "email": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "example": "No account found with this email address.",
+                        },
+                    },
+                    "non_field_errors": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "example": "두 개의 패스워드 필드가 서로 맞지 않습니다.",
+                        },
+                    },
+                    "password1": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "example": "두 개의 패스워드 필드가 서로 맞지 않습니다.",
+                        },
+                    },
+                },
+            },
+            examples=[
+                OpenApiExample(
+                    name="This email is already registered",
+                    summary="이미 해당 이메일이 사용 중일 때",
+                    value={"email": ["이 이메일은 이미 사용 중입니다."]},
+                ),
+                OpenApiExample(
+                    name="The two password fields do not match.",
+                    summary="password1과 password2 필드 값이 맞지 않을 때",
+                    value={
+                        "non_field_erros": [
+                            "두 개의 패스워드 필드가 서로 맞지 않습니다."
+                        ]
+                    },
+                ),
+                OpenApiExample(
+                    name="password validation error",
+                    summary="비밀번호 유효성 검사 오류",
+                    value={
+                        "password1": [
+                            "비밀번호가 너무 짧습니다. 최소 8 문자를 포함해야 합니다.",
+                            "비밀번호가 너무 일상적인 단어입니다.",
+                            "비밀번호가 전부 숫자로 되어 있습니다.",
+                        ]
+                    },
+                ),
+            ],
+            description="Invalid email or email verification required.",
+        ),
+    },
+)
 @extend_schema_serializer(exclude_fields=["username"])
 class CustomRegisterView(RegisterView):
     serializer_class = CustomRegisterSerializer
