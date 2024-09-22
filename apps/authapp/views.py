@@ -28,7 +28,7 @@ from rest_framework_simplejwt.views import TokenRefreshView
 
 from config.utils import unauthorized_response
 
-from .models import User
+from .models import Profile, User
 from .serializers import (
     CustomLoginSerializer,
     CustomRegisterSerializer,
@@ -122,14 +122,25 @@ class OurLoginView(LoginView):
     serializer_class = CustomLoginSerializer
 
     def get_response(self):
+        user_id = self.user.pk
         data = {
             "access": str(self.access_token),
             "refresh": str(self.refresh_token),
             "user": {
-                "pk": self.user.pk,
+                "pk": user_id,
                 "email": self.user.email,
             },
         }
+
+        try:
+            profile = Profile.objects.using("main_db").get(user_id=user_id)
+            profile_id = profile.id
+
+        # 프로필이 생성되지 않았더라면 null값으로
+        except Profile.DoesNotExist:
+            profile_id = None
+
+        data["user"]["profile_id"] = profile_id
 
         return Response(data, status=status.HTTP_200_OK)
 
@@ -496,6 +507,14 @@ class GoogleLoginCallback(APIView):
             )
             user.set_unusable_password()  # 소셜 로그인은 비밀번호가 필요 없음
             user.save()
+
+            # 유저 db에 등록된 이후에 프로필 생성하는 spring api 요청
+            url = "http://13.125.137.216:8080/profiles"
+            data = {
+                "id": user.id,
+            }
+            response = requests.post(url, json=data)
+
         return user
 
     def get_user_info(self, user):
@@ -625,7 +644,7 @@ class PasswordResetRequestView(APIView):
 
         # 재설정 url (frontend url)
         # reset_url = f"{request.build_absolute_uri(reverse('password-reset-confirm', args=[uid, token]))}"
-        reset_url = f"http://localhost:8000/reset-password/{uid}/{token}"
+        # reset_url = f"http://localhost:3000/reset-password/{uid}/{token}"
         # 이메일 내용
         subject = "Our Journey에서 비밀번호 재설정"
         message = f"안녕하세요,\n\n다음 링크를 통해 비밀번호를 재설정할 수 있습니다:\n{reset_url}\n새 비밀번호를 요청하지 않으셨나요? 이 이메일을 무시해주세요."

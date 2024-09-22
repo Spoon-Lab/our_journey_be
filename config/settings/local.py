@@ -39,7 +39,16 @@ DATABASES = {
         "HOST": "ourjourney-be-db.cfkuy0m0a1v2.ap-northeast-2.rds.amazonaws.com",  # MySQL 컨테이너 이름
         # "HOST": "localhost",
         "PORT": "3306",
-    }
+    },
+    "main_db": {
+        "ENGINE": "django.db.backends.mysql",
+        "NAME": "ourjourney_main_db",
+        "USER": "root",
+        "PASSWORD": MYSQL_PASSWORD,
+        "HOST": "ourjourney-be-db.cfkuy0m0a1v2.ap-northeast-2.rds.amazonaws.com",  # MySQL 컨테이너 이름
+        # "HOST": "localhost",
+        "PORT": "3306",
+    },
 }
 
 CLIENT_ID = env("CLIENT_ID")
