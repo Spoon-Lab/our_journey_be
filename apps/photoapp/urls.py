@@ -4,7 +4,7 @@ from .views import ImageUploadAPIView
 
 urlpatterns = [
     path(
-        "image-upload/",
+        "image-upload",
         ImageUploadAPIView.as_view(),
         name="image-upload",
     ),

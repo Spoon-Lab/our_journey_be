@@ -1,7 +1,7 @@
 import os
-import sys
-from datetime import timedelta, datetime
+from datetime import timedelta
 from pathlib import Path
+
 import pymysql
 
 pymysql.install_as_MySQLdb()
@@ -16,6 +16,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django.contrib.sites",
+    "corsheaders",
     "apps.authapp",
     "apps.photoapp",
     "allauth",
@@ -32,6 +33,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",

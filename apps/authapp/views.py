@@ -1,9 +1,5 @@
 import requests
-from allauth.account.models import (
-    EmailAddress,
-    EmailConfirmation,
-    EmailConfirmationHMAC,
-)
+from allauth.account.models import EmailAddress, EmailConfirmationHMAC
 from dj_rest_auth.registration.views import RegisterView
 from dj_rest_auth.views import LoginView, LogoutView, PasswordChangeView
 from django.conf import settings
@@ -45,7 +41,7 @@ from .serializers import (
 @extend_schema(
     tags=["User Registration"],
     responses={
-        200: OpenApiResponse(
+        201: OpenApiResponse(
             response={
                 "type": "object",
                 "properties": {
@@ -163,23 +159,18 @@ class OurLoginView(LoginView):
                 },
                 examples=[
                     OpenApiExample(
-                        name="Email verification required",
-                        summary="로그인 전에 이메일 인증이 필요할 때",
-                        value={"detail": "Email verification is required to log in."},
-                    ),
-                    OpenApiExample(
                         name="No account found",
                         summary="계정이 존재하지 않을 때",
                         value={"email": ["No account found with this email address."]},
                     ),
                 ],
-                description="Invalid email or email verification required.",
+                description="No account found with this email address.",
             ),
             403: OpenApiResponse(
                 response={
                     "type": "object",
                     "properties": {
-                        "detail": {
+                        "error": {
                             "type": "string",
                             "example": "Email verification is required to log in.",
                         }
@@ -204,7 +195,7 @@ class OurLoginView(LoginView):
             ).exists()
         ):
             return Response(
-                {"detail": _("Email verification is required to log in.")},
+                {"error": _("Email verification is required to log in.")},
                 status=status.HTTP_403_FORBIDDEN,  # Forbidden 응답
             )
         return self.get_response()
@@ -325,33 +316,44 @@ class UserAuthenticationView(APIView):
         return JsonResponse(response_data)
 
 
+@extend_schema(
+    tags=["User Email confirmation after join"],
+    description="유저가 회원가입 후 메일함에서 인증 완료하는 api",
+)
 class ConfirmEmailView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, *args, **kwargs):
-        self.object = confirmation = self.get_object()
+        confirmation = self.get_object()
+
+        # email_confirmation이 None이면 400 응답
+        if confirmation is None:
+            return Response(
+                {"error": "Invalid or expired confirmation link."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         confirmation.confirm(self.request)
 
-        return HttpResponseRedirect(redirect_to="/#/email-confirmed")
+        # 이메일 인증이 완료된 후 spring 프로필 생성하는 API 요청
+        url = "http://13.125.137.216:8080/profiles"
+        data = {
+            "id": confirmation.email_address.user.id,
+        }
+        response = requests.post(url, json=data)
+
+        return HttpResponseRedirect(redirect_to="http://localhost:3000/login")
 
     def get_object(self, queryset=None):
         key = self.kwargs["key"]
-        email_confirmation = EmailConfirmationHMAC.from_key(key)
-        if not email_confirmation:
-            if queryset is None:
-                queryset = self.get_queryset()
-            try:
-                email_confirmation = queryset.get(key=key.lower())
-            except EmailConfirmation.DoesNotExist:
-                # A React Router Route will handle the failure scenario
-                # return Response({"detail":"login fail"})
-                return HttpResponseRedirect(redirect_to="/")
-        return email_confirmation
 
-    def get_queryset(self):
-        qs = EmailConfirmation.objects.all_valid()
-        qs = qs.select_related("email_address__user")
-        return qs
+        # 이메일 인증할 객체가 있는지 확인
+        email_confirmation = EmailConfirmationHMAC.from_key(key)
+
+        if not email_confirmation:
+            return None  # 인증할 객체가 없는 경우 None으로 반환
+
+        return email_confirmation
 
 
 class AdminCategoryAPIView(APIView):
@@ -496,6 +498,17 @@ class GoogleLoginCallback(APIView):
             user.save()
         return user
 
+    def get_user_info(self, user):
+        refresh = RefreshToken.for_user(user)
+        return {
+            "access": str(refresh.access_token),
+            "refresh": str(refresh),
+            "user": {
+                "pk": user.pk,
+                "email": user.email,
+            },
+        }
+
     @extend_schema(
         tags=["Google Social Login Callback API"],
         request={
@@ -541,8 +554,11 @@ class GoogleLoginCallback(APIView):
             # 사용자 생성 또는 업데이트
             user = self.create_or_update_user(email, token_info)
 
+            # 구글 로그인도 일반 로그인과 동일하게 응답
+            user_info = self.get_user_info(user)
+
             return Response(
-                {"user_id": user.email},
+                user_info,
                 status=status.HTTP_200_OK,
             )
         except ValueError as e:
@@ -609,10 +625,10 @@ class PasswordResetRequestView(APIView):
 
         # 재설정 url (frontend url)
         # reset_url = f"{request.build_absolute_uri(reverse('password-reset-confirm', args=[uid, token]))}"
-        reset_url = f"http://localhost:8000/auth/password/reset/confirm/{uid}/{token}/"
+        reset_url = f"http://localhost:8000/reset-password/{uid}/{token}"
         # 이메일 내용
         subject = "Our Journey에서 비밀번호 재설정"
-        message = f"안녕하세요,\n\n다음 링크를 통해 비밀번호를 재설정할 수 있습니다:\n{reset_url}새 비밀번호를 요청하지 않으셨나요? 이 이메일을 무시해주세요."
+        message = f"안녕하세요,\n\n다음 링크를 통해 비밀번호를 재설정할 수 있습니다:\n{reset_url}\n새 비밀번호를 요청하지 않으셨나요? 이 이메일을 무시해주세요."
 
         # 이메일 발송
         send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [email])
@@ -628,8 +644,24 @@ class PasswordResetConfirmView(PasswordChangeView):
         description="User can change password with uid and token data.",
         responses={
             200: OpenApiResponse(description="New password has been saved."),
-            400: OpenApiResponse(examples={"error": ""}),
-            401: unauthorized_response(),
+            400: OpenApiResponse(
+                response={
+                    "type": "object",
+                    "properties": {
+                        "error": {
+                            "type": "string",
+                        }
+                    },
+                },
+                examples=[
+                    OpenApiExample(
+                        name="Invalid token or token is expired",
+                        summary="비밀번호 재설정 링크가 유효하지 않거나 만료 혹은 이미 사용되었을 경우",
+                        value={"error": "Invalid token or token is expired."},
+                    ),
+                ],
+                description="This field is required.",
+            ),
         },
     )
     def post(self, request, uidb64, token, *args, **kwargs):
@@ -646,7 +678,6 @@ class PasswordResetConfirmView(PasswordChangeView):
 
         # 재설정을 요청하는 유저와 토큰값이 일치한지 확인
         if not default_token_generator.check_token(user, token):
-
             return Response(
                 {"error": "Invalid token or token is expired."},
                 status=status.HTTP_400_BAD_REQUEST,
