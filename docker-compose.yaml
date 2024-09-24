@@ -1,26 +1,11 @@
   version: '3.7'
 
   services:
-#    db:
-#      image: mysql
-#      container_name: mysql_service
-#      environment:
-#        MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD}
-#        MYSQL_DATABASE: ourjourney_auth_db
-#        TZ: Asia/Seoul
-#      command: mysqld --character-set-server=utf8 --collation-server=utf8_general_ci
-#      ports:
-#        - "3307:3306" # 호스트의 3307 포트를 컨테이너의 3306 포트로 매핑
-#      volumes:
-#        - db_data:/var/lib/mysql
-#      networks:
-#        - my_network
-
     backend_auth:
       image: spoonlab/ourjourney-be-auth:latest
       container_name: backend_auth
       environment:
-        MYSQL_HOST: ourjourney-be-db.cfkuy0m0a1v2.ap-northeast-2.rds.amazonaws.com
+        MYSQL_HOST: ${MYSQL_HOST}
         MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD}
         MYSQL_DATABASE: ourjourney_auth_db
         MYSQL_USER: root
