@@ -1,8 +1,8 @@
 import asyncio
-import boto3
-from botocore.exceptions import ClientError
-from botocore.config import Config
 
+import boto3
+from botocore.config import Config
+from botocore.exceptions import ClientError
 from django.conf import settings
 
 

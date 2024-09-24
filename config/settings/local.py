@@ -5,7 +5,7 @@ from .base import *
 env = environ.Env(DEBUG=(bool, False))
 
 
-DEBUG = True
+DEBUG = False
 
 # 환경변수 파일 읽어오기
 environ.Env.read_env(env_file=os.path.join(BASE_DIR, ".env"))
@@ -13,6 +13,7 @@ environ.Env.read_env(env_file=os.path.join(BASE_DIR, ".env"))
 SECRET_KEY = env("DJANGO_SECRET_KEY")
 
 MYSQL_PASSWORD = env("MYSQL_PASSWORD")
+MYSQL_HOST = env("MYSQL_HOST")
 
 ALLOWED_HOSTS = ["3.38.47.219", "127.0.0.1"]
 
@@ -36,8 +37,7 @@ DATABASES = {
         "NAME": "ourjourney_auth_db",
         "USER": "root",
         "PASSWORD": MYSQL_PASSWORD,
-        "HOST": "ourjourney-be-db.cfkuy0m0a1v2.ap-northeast-2.rds.amazonaws.com",  # MySQL 컨테이너 이름
-        # "HOST": "localhost",
+        "HOST": MYSQL_HOST,
         "PORT": "3306",
     },
     "main_db": {
@@ -45,8 +45,7 @@ DATABASES = {
         "NAME": "ourjourney_main_db",
         "USER": "root",
         "PASSWORD": MYSQL_PASSWORD,
-        "HOST": "ourjourney-be-db.cfkuy0m0a1v2.ap-northeast-2.rds.amazonaws.com",  # MySQL 컨테이너 이름
-        # "HOST": "localhost",
+        "HOST": MYSQL_HOST,
         "PORT": "3306",
     },
 }

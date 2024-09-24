@@ -2,9 +2,10 @@ from allauth.account.adapter import get_adapter
 from allauth.account.utils import setup_user_email
 from dj_rest_auth.registration.serializers import RegisterSerializer
 from dj_rest_auth.serializers import LoginSerializer
-from django.contrib.auth import authenticate, get_user_model
+from django.contrib.auth import authenticate
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
 from .models import User
 
@@ -18,13 +19,6 @@ class CustomRegisterSerializer(RegisterSerializer):
         if "username" in self.fields:
             self.fields.pop("username")
 
-    # 이메일 중복 검사 추가
-    def validate_email(self, email):
-        User = get_user_model()
-        if User.objects.filter(email=email).exists():
-            raise serializers.ValidationError("이 이메일은 이미 사용 중입니다.")
-        return email
-
     def get_cleaned_data(self):
         return {
             "email": self.validated_data.get("email", ""),
@@ -35,12 +29,6 @@ class CustomRegisterSerializer(RegisterSerializer):
         adapter = get_adapter()
         user = adapter.new_user(request)
         self.cleaned_data = self.get_cleaned_data()
-
-        # 이메일 중복 체크
-        email = self.cleaned_data.get("email")
-        User = get_user_model()
-        if User.objects.filter(email=email).exists():
-            raise serializers.ValidationError("이 이메일은 이미 사용 중입니다.")
 
         # 비밀번호 검증
         user = adapter.save_user(request, user, self, commit=False)
@@ -74,12 +62,12 @@ class CustomLoginSerializer(LoginSerializer):
             if not user:
                 # 사용자 객체가 없으면 자격 증명이 잘못된 것
                 if User.objects.filter(email=email).exists():
-                    raise serializers.ValidationError(
-                        {"password": _("Incorrect password. Please try again.")}
+                    raise ValidationError(
+                        {"error": _("Incorrect password. Please try again.")}
                     )
                 else:
-                    raise serializers.ValidationError(
-                        {"email": _("No account found with this email address.")}
+                    raise ValidationError(
+                        {"error": _("No account found with this email address.")}
                     )
         else:
             raise serializers.ValidationError(_('Must include "email" and "password".'))
