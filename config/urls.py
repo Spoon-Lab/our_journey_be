@@ -18,13 +18,11 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 from drf_spectacular.views import (
-    SpectacularAPIView,
     SpectacularJSONAPIView,
     SpectacularRedocView,
     SpectacularSwaggerView,
     SpectacularYAMLAPIView,
 )
-
 
 urlpatterns = [
     path("admin/", admin.site.urls),

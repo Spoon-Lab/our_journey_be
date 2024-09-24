@@ -1,8 +1,10 @@
 import os
-import sys
-from datetime import timedelta, datetime
+from datetime import timedelta
 from pathlib import Path
-from .manage_secret.local import read_env
+
+import pymysql
+
+pymysql.install_as_MySQLdb()
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -14,6 +16,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django.contrib.sites",
+    "corsheaders",
     "apps.authapp",
     "apps.photoapp",
     "allauth",
@@ -30,6 +33,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -41,22 +45,6 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = "config.urls"
-
-env = read_env(base_dir=BASE_DIR)
-
-DJANGO_SECRET_KEY = env["DJANGO_SECRET_KEY"]
-CLIENT_ID = env["CLIENT_ID"]
-GOOGLE_SECRET = env["GOOGLE_SECRET"]
-
-# 구글 OAuth2 설정
-SOCIALACCOUNT_PROVIDERS = {
-    "google": {
-        "SCOPE": ["profile", "email"],
-        "AUTH_PARAMS": {"access_type": "online"},
-        "CLIENT_ID": CLIENT_ID,
-        "SECRET": GOOGLE_SECRET,
-    }
-}
 
 ROOT_URLCONF = "config.urls"
 
@@ -104,10 +92,9 @@ EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 
 EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = "587"
-EMAIL_HOST_USER = env["EMAIL_HOST_USER"]
-EMAIL_HOST_PASSWORD = env["EMAIL_HOST_PASSWORD"]
+
 EMAIL_USE_TLS = True
-DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
 
 ACCOUNT_CONFIRM_EMAIL_ON_GET = True  # 유저가 링크 클릭 시 회원가입 완료
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
@@ -206,9 +193,6 @@ AUTH_PASSWORD_VALIDATORS = [
 
 S3_URI = "https://spoon-ourjourney.s3.ap-northeast-2.amazonaws.com"
 
-S3_BUCKET_NAME = env["S3_BUCKET_NAME"]
-S3_ACCESS_KEY = env["S3_ACCESS_KEY"]
-S3_SECRET_KEY = env["S3_SECRET_KEY"]
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 

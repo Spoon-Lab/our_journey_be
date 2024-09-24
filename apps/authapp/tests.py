@@ -49,7 +49,6 @@ class PasswordResetRequestTest(APITestCase):
 
         # 응답 코드가 200 OK인지 확인
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        print(len(mail.outbox))
         self.assertEqual(len(mail.outbox), 1)  # 메일이 한 통 전송되었는지 확인
         self.assertIn("Password reset", mail.outbox[0].subject)  # 메일 제목 확인
         self.assertIn("testuser@example.com", mail.outbox[0].to)
