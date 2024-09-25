@@ -18,13 +18,16 @@ class ImageUploadAPIView(APIView):
     S3_BUCKET_NAME = settings.S3_BUCKET_NAME
 
     def get_s3_path(self, photo_type):
-        """S3 경로를 사용자 ID와 사진 타입에 따라 설정"""
-        if photo_type == "profile":
-            return f"media/users/profile"
-        elif photo_type == "content":
-            return f"media/users/content"
-        elif photo_type == "thread":
-            return f"media/users/thread"
+        """S3 경로 사진 타입에 따라 설정"""
+        type_profile = "profile"
+        type_content = "content"
+        type_thread = "thread"
+        if photo_type == type_profile:
+            return f"media/{type_profile}"
+        elif photo_type == type_content:
+            return f"media/{type_content}"
+        elif photo_type == type_thread:
+            return f"media/{type_thread}"
         else:
             raise ValidationError({"detail": "Invalid photo type."})
 
@@ -47,7 +50,7 @@ class ImageUploadAPIView(APIView):
                 Bucket=self.S3_BUCKET_NAME, Delete={"Objects": delete_keys}
             )
 
-    async def upload_images(self, folder_dir, images):
+    async def upload_images(self, bucket_name, folder_dir, images):
         upload_tasks = []
         image_urls = []
         for x in images:
@@ -124,11 +127,9 @@ class ImageUploadAPIView(APIView):
 
         folder_dir = self.get_s3_path(photo_type)
 
-        # photo_type이 'profile'일 경우, 기존 이미지를 삭제
-        if photo_type == "profile":
-            self.delete_existing_images(folder_dir)
-
-        image_urls = asyncio.run(self.upload_images(folder_dir, images))
+        image_urls = asyncio.run(
+            self.upload_images(self.S3_BUCKET_NAME, folder_dir, images)
+        )
 
         return Response(
             {"image_url": image_urls},

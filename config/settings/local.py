@@ -15,7 +15,9 @@ SECRET_KEY = env("DJANGO_SECRET_KEY")
 MYSQL_PASSWORD = env("MYSQL_PASSWORD")
 MYSQL_HOST = env("MYSQL_HOST")
 
-ALLOWED_HOSTS = ["3.38.47.219", "127.0.0.1"]
+MYSQL_HOST = env("MYSQL_HOST")
+
+ALLOWED_HOSTS = ["3.38.47.219", "127.0.0.1", "localhost"]
 
 
 CSRF_TRUSTED_ORIGINS = [
@@ -35,14 +37,6 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
         "NAME": "ourjourney_auth_db",
-        "USER": "root",
-        "PASSWORD": MYSQL_PASSWORD,
-        "HOST": MYSQL_HOST,
-        "PORT": "3306",
-    },
-    "main_db": {
-        "ENGINE": "django.db.backends.mysql",
-        "NAME": "ourjourney_main_db",
         "USER": "root",
         "PASSWORD": MYSQL_PASSWORD,
         "HOST": MYSQL_HOST,
