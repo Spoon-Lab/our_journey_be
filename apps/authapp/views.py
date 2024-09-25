@@ -18,6 +18,7 @@ from drf_spectacular.utils import (
     extend_schema_serializer,
 )
 from rest_framework import status
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -37,81 +38,67 @@ from .serializers import (
 )
 
 
-@extend_schema(
-    tags=["User Registration"],
-    responses={
-        201: OpenApiResponse(
-            response={
-                "type": "object",
-                "properties": {
-                    "detail": {
-                        "type": "string",
-                        "example": "확인 이메일을 발송했습니다.",
-                    }
-                },
-            }
-        ),
-        400: OpenApiResponse(
-            response={
-                "type": "object",
-                "properties": {
-                    "email": {
-                        "type": "array",
-                        "items": {
-                            "type": "string",
-                            "example": "No account found with this email address.",
-                        },
-                    },
-                    "non_field_errors": {
-                        "type": "array",
-                        "items": {
-                            "type": "string",
-                            "example": "두 개의 패스워드 필드가 서로 맞지 않습니다.",
-                        },
-                    },
-                    "password1": {
-                        "type": "array",
-                        "items": {
-                            "type": "string",
-                            "example": "두 개의 패스워드 필드가 서로 맞지 않습니다.",
-                        },
-                    },
-                },
-            },
-            examples=[
-                OpenApiExample(
-                    name="This email is already registered",
-                    summary="이미 해당 이메일이 사용 중일 때",
-                    value={"email": ["이 이메일은 이미 사용 중입니다."]},
-                ),
-                OpenApiExample(
-                    name="The two password fields do not match.",
-                    summary="password1과 password2 필드 값이 맞지 않을 때",
-                    value={
-                        "non_field_erros": [
-                            "두 개의 패스워드 필드가 서로 맞지 않습니다."
-                        ]
-                    },
-                ),
-                OpenApiExample(
-                    name="password validation error",
-                    summary="비밀번호 유효성 검사 오류",
-                    value={
-                        "password1": [
-                            "비밀번호가 너무 짧습니다. 최소 8 문자를 포함해야 합니다.",
-                            "비밀번호가 너무 일상적인 단어입니다.",
-                            "비밀번호가 전부 숫자로 되어 있습니다.",
-                        ]
-                    },
-                ),
-            ],
-            description="Invalid email or email verification required.",
-        ),
-    },
-)
-@extend_schema_serializer(exclude_fields=["username"])
 class CustomRegisterView(RegisterView):
     serializer_class = CustomRegisterSerializer
+
+    @extend_schema(
+        tags=["User Registration"],
+        responses={
+            201: OpenApiResponse(
+                response={
+                    "type": "object",
+                    "properties": {
+                        "detail": {
+                            "type": "string",
+                            "example": "확인 이메일을 발송했습니다.",
+                        }
+                    },
+                }
+            ),
+            400: OpenApiResponse(
+                response={
+                    "type": "object",
+                    "properties": {
+                        "error": {
+                            "type": "string",
+                        }
+                    },
+                },
+                examples=[
+                    OpenApiExample(
+                        name="This email is already registered",
+                        summary="이미 해당 이메일이 사용 중일 때",
+                        value={"error": "email is already registered"},
+                    ),
+                    OpenApiExample(
+                        name="The two password fields do not match.",
+                        summary="password1과 password2 필드 값이 맞지 않을 때",
+                        value={"error": "password do not match"},
+                    ),
+                    OpenApiExample(
+                        name="password validation error",
+                        summary="비밀번호 유효성 검사 오류",
+                        value={"error": "use safe password"},
+                    ),
+                ],
+                description="email is already registered or password error",
+            ),
+        },
+    )
+    @extend_schema_serializer(exclude_fields=["username"])
+    def post(self, request, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data)
+
+        if not serializer.is_valid():
+            errors = serializer.errors
+            # 이메일 중복 에러 처리
+            if "email" in errors:
+                raise ValidationError({"error": "email is already registered"})
+            if "password1" in errors:
+                raise ValidationError({"error": "use safe password"})
+            else:
+                raise ValidationError({"error": "password do not match"})
+        return super().post(request, *args, **kwargs)
 
 
 @extend_schema(tags=["User Login"])
@@ -163,7 +150,7 @@ class OurLoginView(LoginView):
                         value={"error": ["No account found with this email address."]},
                     ),
                     OpenApiExample(
-                        name="Incorrect password.",
+                        name="Incorrect password",
                         summary="비밀번호가 틀렸을 때",
                         value={"error": ["Incorrect password. Please try again."]},
                     ),
@@ -186,6 +173,7 @@ class OurLoginView(LoginView):
     )
     def post(self, request, *args, **kwargs):
         self.request = request
+        
         # admin 계정이 아니고, 인증 메일 확인하기 전이면 403
         if (
             not self.request.user.is_superuser

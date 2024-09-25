@@ -5,7 +5,7 @@ from .base import *
 env = environ.Env(DEBUG=(bool, False))
 
 
-DEBUG = True
+DEBUG = False
 
 # 환경변수 파일 읽어오기
 environ.Env.read_env(env_file=os.path.join(BASE_DIR, ".env"))
@@ -13,6 +13,7 @@ environ.Env.read_env(env_file=os.path.join(BASE_DIR, ".env"))
 SECRET_KEY = env("DJANGO_SECRET_KEY")
 
 MYSQL_PASSWORD = env("MYSQL_PASSWORD")
+MYSQL_HOST = env("MYSQL_HOST")
 
 MYSQL_HOST = env("MYSQL_HOST")
 
@@ -38,10 +39,9 @@ DATABASES = {
         "NAME": "ourjourney_auth_db",
         "USER": "root",
         "PASSWORD": MYSQL_PASSWORD,
-        "HOST": MYSQL_HOST,  # MySQL 컨테이너 이름
-        # "HOST": "localhost",
+        "HOST": MYSQL_HOST,
         "PORT": "3306",
-    }
+    },
 }
 
 CLIENT_ID = env("CLIENT_ID")

@@ -18,13 +18,16 @@ class ImageUploadAPIView(APIView):
     S3_BUCKET_NAME = settings.S3_BUCKET_NAME
 
     def get_s3_path(self, photo_type):
-        """S3 경로를 사용자 ID와 사진 타입에 따라 설정"""
-        if photo_type == "profile":
-            return f"media/profile"
-        elif photo_type == "content":
-            return f"media/content"
-        elif photo_type == "thread":
-            return f"media/thread"
+        """S3 경로 사진 타입에 따라 설정"""
+        type_profile = "profile"
+        type_content = "content"
+        type_thread = "thread"
+        if photo_type == type_profile:
+            return f"media/{type_profile}"
+        elif photo_type == type_content:
+            return f"media/{type_content}"
+        elif photo_type == type_thread:
+            return f"media/{type_thread}"
         else:
             raise ValidationError({"detail": "Invalid photo type."})
 
@@ -57,7 +60,7 @@ class ImageUploadAPIView(APIView):
 
             # Presigned URL 생성
             presigned_url = generate_presigned_url(
-                bucket_name, folder_dir, x, 60 * 60, "get"
+                self.S3_BUCKET_NAME, folder_dir, x, 60 * 60, "get"
             )
             image_urls.append(presigned_url)
 
@@ -73,7 +76,7 @@ class ImageUploadAPIView(APIView):
                     "photo_type": {
                         "type": "string",
                         "enum": ["profile", "content", "thread"],
-                        "description": "The type of the photo (e.g., profile, content, thread)",
+                        "description": "Type of the photo to be uploaded. Example values: 'profile', 'content', 'thread'.",
                     },
                     "images": {
                         "type": "array",
@@ -111,7 +114,7 @@ class ImageUploadAPIView(APIView):
             ),
             401: unauthorized_response(),
         },
-        description="Upload images to S3 for user profile or thread image",
+        description="Upload or reupload images to S3",
     )
     def post(self, request):
         photo_type = request.data.get("photo_type")
