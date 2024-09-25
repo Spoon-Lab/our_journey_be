@@ -14,7 +14,9 @@ SECRET_KEY = env("DJANGO_SECRET_KEY")
 
 MYSQL_PASSWORD = env("MYSQL_PASSWORD")
 
-ALLOWED_HOSTS = ["3.38.47.219", "127.0.0.1"]
+MYSQL_HOST = env("MYSQL_HOST")
+
+ALLOWED_HOSTS = ["3.38.47.219", "127.0.0.1", "localhost"]
 
 
 CSRF_TRUSTED_ORIGINS = [
@@ -36,7 +38,7 @@ DATABASES = {
         "NAME": "ourjourney_auth_db",
         "USER": "root",
         "PASSWORD": MYSQL_PASSWORD,
-        "HOST": "ourjourney-be-db.cfkuy0m0a1v2.ap-northeast-2.rds.amazonaws.com",  # MySQL 컨테이너 이름
+        "HOST": MYSQL_HOST,  # MySQL 컨테이너 이름
         # "HOST": "localhost",
         "PORT": "3306",
     }

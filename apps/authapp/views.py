@@ -6,7 +6,6 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
-from django.db import connections
 from django.http import HttpResponseRedirect, JsonResponse
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
@@ -19,7 +18,7 @@ from drf_spectacular.utils import (
     extend_schema_serializer,
 )
 from rest_framework import status
-from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
@@ -122,15 +121,15 @@ class OurLoginView(LoginView):
     serializer_class = CustomLoginSerializer
 
     def get_response(self):
+        user_id = self.user.pk
         data = {
             "access": str(self.access_token),
             "refresh": str(self.refresh_token),
             "user": {
-                "pk": self.user.pk,
+                "pk": user_id,
                 "email": self.user.email,
             },
         }
-
         return Response(data, status=status.HTTP_200_OK)
 
     @extend_schema(
@@ -161,10 +160,15 @@ class OurLoginView(LoginView):
                     OpenApiExample(
                         name="No account found",
                         summary="계정이 존재하지 않을 때",
-                        value={"email": ["No account found with this email address."]},
+                        value={"error": ["No account found with this email address."]},
+                    ),
+                    OpenApiExample(
+                        name="Incorrect password.",
+                        summary="비밀번호가 틀렸을 때",
+                        value={"error": ["Incorrect password. Please try again."]},
                     ),
                 ],
-                description="No account found with this email address.",
+                description="No account or incorrect password",
             ),
             403: OpenApiResponse(
                 response={
@@ -172,7 +176,7 @@ class OurLoginView(LoginView):
                     "properties": {
                         "error": {
                             "type": "string",
-                            "example": "Email verification is required to log in.",
+                            "example": ["Email verification is required to log in."],
                         }
                     },
                 },
@@ -182,23 +186,25 @@ class OurLoginView(LoginView):
     )
     def post(self, request, *args, **kwargs):
         self.request = request
-        self.serializer = self.get_serializer(data=self.request.data)
-
-        self.serializer.is_valid(raise_exception=True)
-
-        self.login()
         # admin 계정이 아니고, 인증 메일 확인하기 전이면 403
         if (
             not self.request.user.is_superuser
             and EmailAddress.objects.filter(
-                email=self.user.email, verified=False
+                email=request.data["email"], verified=False
             ).exists()
         ):
             return Response(
-                {"error": _("Email verification is required to log in.")},
+                {"error": [_("Email verification is required to log in.")]},
                 status=status.HTTP_403_FORBIDDEN,  # Forbidden 응답
             )
-        return self.get_response()
+        else:
+            self.serializer = self.get_serializer(data=self.request.data)
+
+            self.serializer.is_valid(raise_exception=True)
+
+            self.login()
+
+            return self.get_response()
 
 
 class OurLogoutView(LogoutView):
@@ -356,49 +362,6 @@ class ConfirmEmailView(APIView):
         return email_confirmation
 
 
-class AdminCategoryAPIView(APIView):
-    permission_classes = [IsAdminUser]  # Django Admin 계정만 접근 가능
-
-    @extend_schema(
-        request={
-            "application/json": {
-                "type": "object",
-                "properties": {"category_name": {"type": "string"}},
-            }
-        },
-        responses={
-            201: OpenApiResponse(description="Category created successfully."),
-            400: OpenApiResponse(description="Invalid credentials or validation error"),
-            403: OpenApiResponse(description="This action is not permitted."),
-        },
-    )
-    def post(self, request):
-        category_name = request.data.get("category_name")
-
-        # name 값이 없으면 에러 처리
-        if not category_name:
-            return Response(
-                {"detail": "Category name is required."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        try:
-            # 외부 DB에 새로운 카테고리 추가
-            with connections["external_db"].cursor() as cursor:
-                cursor.execute(
-                    "INSERT INTO category (name) VALUES (%s)", [category_name]
-                )
-
-            return Response(
-                {"detail": f"Category '{category_name}' created successfully."},
-                status=status.HTTP_201_CREATED,
-            )
-        except Exception as e:
-            return Response(
-                {"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-
-
 class CustomTokenRefreshView(TokenRefreshView):
     @extend_schema(
         tags=["refresh Access token"],
@@ -496,6 +459,14 @@ class GoogleLoginCallback(APIView):
             )
             user.set_unusable_password()  # 소셜 로그인은 비밀번호가 필요 없음
             user.save()
+
+            # 유저 db에 등록된 이후에 프로필 생성하는 spring api 요청
+            url = "http://13.125.137.216:8080/profiles"
+            data = {
+                "id": user.id,
+            }
+            response = requests.post(url, json=data)
+
         return user
 
     def get_user_info(self, user):
@@ -531,9 +502,14 @@ class GoogleLoginCallback(APIView):
                         name="ID token value none",
                         summary="ID token 값이 전달되지 않음",
                         value={"error": "ID token is required."},
-                    )
+                    ),
+                    OpenApiExample(
+                        name="Invalid token",
+                        summary="ID token 값이 유효하지 않음",
+                        value={"error": "Invalid token"},
+                    ),
                 ],
-                description="ID token is required.",
+                description="ID token error",
             ),
         },
     )
@@ -625,7 +601,7 @@ class PasswordResetRequestView(APIView):
 
         # 재설정 url (frontend url)
         # reset_url = f"{request.build_absolute_uri(reverse('password-reset-confirm', args=[uid, token]))}"
-        reset_url = f"http://localhost:8000/reset-password/{uid}/{token}"
+        reset_url = f"http://localhost:3000/reset-password/{uid}/{token}"
         # 이메일 내용
         subject = "Our Journey에서 비밀번호 재설정"
         message = f"안녕하세요,\n\n다음 링크를 통해 비밀번호를 재설정할 수 있습니다:\n{reset_url}\n새 비밀번호를 요청하지 않으셨나요? 이 이메일을 무시해주세요."
@@ -657,7 +633,17 @@ class PasswordResetConfirmView(PasswordChangeView):
                     OpenApiExample(
                         name="Invalid token or token is expired",
                         summary="비밀번호 재설정 링크가 유효하지 않거나 만료 혹은 이미 사용되었을 경우",
-                        value={"error": "Invalid token or token is expired."},
+                        value={"error": ["Invalid token or token is expired."]},
+                    ),
+                    OpenApiExample(
+                        name="password value is required",
+                        summary="바꿀 비밀번호 값(new_password1) 혹은 비밀번호 확인값(new_password2)이 없을 때",
+                        value={
+                            "error": [
+                                "new_password1 is required",
+                                "new_password2 is required",
+                            ]
+                        },
                     ),
                 ],
                 description="This field is required.",
@@ -673,13 +659,13 @@ class PasswordResetConfirmView(PasswordChangeView):
         # User 데이터베이스에 id 값이 없을 때
         except (TypeError, ValueError, OverflowError, User.DoesNotExist):
             return Response(
-                {"error": "Invalid uid"}, status=status.HTTP_400_BAD_REQUEST
+                {"error": ["Invalid uid"]}, status=status.HTTP_400_BAD_REQUEST
             )
 
         # 재설정을 요청하는 유저와 토큰값이 일치한지 확인
         if not default_token_generator.check_token(user, token):
             return Response(
-                {"error": "Invalid token or token is expired."},
+                {"error": ["Invalid token or token is expired."]},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -691,4 +677,11 @@ class PasswordResetConfirmView(PasswordChangeView):
             user.set_password(serializer.validated_data["new_password1"])
             user.save()
             return Response(status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        # 필수 항목이 누락된 경우 에러 메시지 커스터마이즈
+        error_list = []
+        for field, errors in serializer.errors.items():
+            for error in errors:
+                if "필수 항목" in error:
+                    error_list.append(f"{field} is required")
+
+        return Response({"error": error_list}, status=status.HTTP_400_BAD_REQUEST)

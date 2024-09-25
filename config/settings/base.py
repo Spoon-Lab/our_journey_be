@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     "dj_rest_auth",
     "dj_rest_auth.registration",
     "drf_spectacular",
+    "drf_standardized_errors",
 ]
 
 MIDDLEWARE = [
@@ -135,7 +136,9 @@ REST_FRAMEWORK = {
         "rest_framework_simplejwt.authentication.JWTAuthentication",  # JWT 인증 클래스 우선
     ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    # "EXCEPTION_HANDLER": "config.utils.custom_exception_handler",
 }
+
 
 REST_AUTH = {
     "USE_JWT": True,

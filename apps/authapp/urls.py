@@ -41,7 +41,6 @@ urlpatterns = [
     ),
     # 구글 소셜 로그인 후 jwt토큰 리턴
     path("redirect", auth_redirect_view, name="auth_redirect"),
-    # path("admin-category/", AdminCategoryAPIView.as_view(), name="admin-category"),
     path(
         "password-reset-request",
         PasswordResetRequestView.as_view(),
