@@ -151,7 +151,7 @@ REST_AUTH = {
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(
-        minutes=30
+        minutes=5
     ),  # Access 토큰 유효기간 (production에서는 더 짧게)
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),  # Refresh 토큰 유효기간
     "ROTATE_REFRESH_TOKENS": False,

@@ -8,6 +8,7 @@ from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.http import HttpResponseRedirect, JsonResponse
 from django.utils.encoding import force_bytes
+from django.utils.html import format_html
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.utils.translation import gettext_lazy as _
 from drf_spectacular.utils import (
@@ -173,7 +174,7 @@ class OurLoginView(LoginView):
     )
     def post(self, request, *args, **kwargs):
         self.request = request
-        
+
         # admin 계정이 아니고, 인증 메일 확인하기 전이면 403
         if (
             not self.request.user.is_superuser
@@ -592,10 +593,27 @@ class PasswordResetRequestView(APIView):
         reset_url = f"http://localhost:3000/reset-password/{uid}/{token}"
         # 이메일 내용
         subject = "Our Journey에서 비밀번호 재설정"
-        message = f"안녕하세요,\n\n다음 링크를 통해 비밀번호를 재설정할 수 있습니다:\n{reset_url}\n새 비밀번호를 요청하지 않으셨나요? 이 이메일을 무시해주세요."
+        # message = f"안녕하세요,\n\n다음 링크를 통해 비밀번호를 재설정할 수 있습니다:\n{reset_url}\n새 비밀번호를 요청하지 않으셨나요? 이 이메일을 무시해주세요."
+
+        # HTML 형식으로 이메일 내용 생성
+        html_message = format_html(
+            """
+            <p>안녕하세요,</p>
+            <p>다음 링크를 통해 비밀번호를 재설정할 수 있습니다:</p>
+            <p><a href="{url}">비밀번호 재설정 링크</a></p>
+            <p>새 비밀번호를 요청하지 않으셨다면 이 이메일을 무시해주세요.</p>
+            """,
+            url=reset_url,
+        )
 
         # 이메일 발송
-        send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [email])
+        send_mail(
+            subject,
+            None,
+            settings.DEFAULT_FROM_EMAIL,
+            [email],
+            html_message=html_message,
+        )
 
         return Response(status=status.HTTP_200_OK)
 
