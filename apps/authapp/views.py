@@ -341,7 +341,7 @@ class ConfirmEmailView(APIView):
         }
         response = requests.post(url, json=data)
 
-        return HttpResponseRedirect(redirect_to="http://localhost:3000/login")
+        return HttpResponseRedirect(redirect_to="/auth/email-confirm")
 
     def get_object(self, queryset=None):
         key = self.kwargs["key"]
