@@ -14,7 +14,6 @@ from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.utils.translation import gettext_lazy as _
 from drf_spectacular.utils import (
     OpenApiExample,
-    OpenApiParameter,
     OpenApiResponse,
     extend_schema,
     extend_schema_serializer,
@@ -25,6 +24,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
 
@@ -200,15 +200,12 @@ class OurLoginView(LoginView):
 class OurLogoutView(LogoutView):
     @extend_schema(
         tags=["User Logout"],
-        parameters=[
-            OpenApiParameter(
-                name="refresh_token",
-                description="The refresh token stored in the cookie for authentication.",
-                required=True,
-                type=str,
-                location=OpenApiParameter.COOKIE,  # 쿠키 파라미터임을 명시
-            )
-        ],
+        request={
+            "application/json": {
+                "type": "object",
+                "properties": {"refresh": {"type": "string"}},
+            }
+        },
         responses={
             200: OpenApiResponse(
                 response={
@@ -228,17 +225,46 @@ class OurLogoutView(LogoutView):
                     "properties": {
                         "detail": {
                             "type": "string",
-                            "example": "Refresh token was not included in cookie data.",
-                        }
+                            "example": "유효하지 않거나 만료된 토큰입니다",  # 구체적인 예시 추가
+                        },
+                        "code": {
+                            "type": "string",
+                            "example": "token_not_valid",  # 구체적인 예시 추가
+                        },
                     },
                 },
-                description="Refresh token was not included in cookie data.",
+                description="Invalid token or token is expired.",
             ),
         },
     )
     def post(self, request, *args, **kwargs):
-        # 기본 토큰 갱신 동작을 그대로 호출
-        return super().post(request, *args, **kwargs)
+        # 요청 본문에서 refresh_token 가져오기
+        refresh_token = request.data.get("refresh")
+
+        if not refresh_token:
+            return Response(
+                {"detail": _("Refresh token was not provided in request data.")},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        # RefreshToken을 블랙리스트에 추가하여 무효화
+        try:
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+
+            # 로그아웃 성공 응답
+            return Response(
+                {"detail": _("Successfully logged out.")}, status=status.HTTP_200_OK
+            )
+
+        except TokenError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_401_UNAUTHORIZED)
+
+        except Exception as e:
+            return Response(
+                {"detail": _("An error occurred during the logout process.")},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
 
 @login_required
@@ -595,7 +621,7 @@ class PasswordResetRequestView(APIView):
 
         # 재설정 url (frontend url)
         # reset_url = f"{request.build_absolute_uri(reverse('password-reset-confirm', args=[uid, token]))}"
-        reset_url = f"http://localhost:3000/reset-password/{uid}/{token}"
+        reset_url = f"https://our-journey-fe.vercel.app/reset-password/{uid}/{token}"
         # 이메일 내용
         subject = "Our Journey에서 비밀번호 재설정"
         # message = f"안녕하세요,\n\n다음 링크를 통해 비밀번호를 재설정할 수 있습니다:\n{reset_url}\n새 비밀번호를 요청하지 않으셨나요? 이 이메일을 무시해주세요."

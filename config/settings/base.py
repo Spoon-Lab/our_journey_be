@@ -30,7 +30,7 @@ INSTALLED_APPS = [
     "dj_rest_auth",
     "dj_rest_auth.registration",
     "drf_spectacular",
-    "drf_standardized_errors",
+    # "drf_standardized_errors",
 ]
 
 MIDDLEWARE = [
@@ -67,7 +67,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-SITE_ID = 4
+SITE_ID = 6
 
 AUTHENTICATION_BACKENDS = (
     "apps.authapp.custom_auth.EmailBackend",
@@ -142,9 +142,10 @@ REST_FRAMEWORK = {
 
 REST_AUTH = {
     "USE_JWT": True,
-    "JWT_AUTH_COOKIE": "access",
-    "JWT_AUTH_REFRESH_COOKIE": "refresh_token",
-    "JWT_AUTH_HTTPONLY": True,
+    # 2차에 프론트 로그아웃 로직 쿠키로 변경하면 다시 주석 해제할 것
+    # "JWT_AUTH_COOKIE": "access",
+    # "JWT_AUTH_REFRESH_COOKIE": "refresh_token",
+    # "JWT_AUTH_HTTPONLY": True,
     "SESSION_LOGIN": False,
 }
 
