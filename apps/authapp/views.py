@@ -219,21 +219,35 @@ class OurLogoutView(LogoutView):
                 },
                 description="Logout Success",
             ),
-            401: OpenApiResponse(
+            400: OpenApiResponse(
                 response={
                     "type": "object",
                     "properties": {
-                        "detail": {
+                        "error": {
                             "type": "string",
-                            "example": "유효하지 않거나 만료된 토큰입니다",  # 구체적인 예시 추가
-                        },
-                        "code": {
-                            "type": "string",
-                            "example": "token_not_valid",  # 구체적인 예시 추가
-                        },
+                            "example": "요청 데이터에 리프레시 토큰이 제공되지 않았습니다.",
+                        }
                     },
+                }
+            ),
+            401: OpenApiResponse(
+                response={
+                    "type": "string",
+                    "properties": {"error": {"type": "string"}},
                 },
-                description="Invalid token or token is expired.",
+                examples=[
+                    OpenApiExample(
+                        name="The token has been blacklisted",
+                        summary="refresh token 값이 블랙리스트에 추가됨",
+                        value={"error": "블랙리스트에 추가된 토큰입니다"},
+                    ),
+                    OpenApiExample(
+                        name="Invalid token",
+                        summary="refresh token 값이 유효하지 않음",
+                        value={"error": "유효하지 않거나 만료된 토큰입니다"},
+                    ),
+                ],
+                description="This field is required.",
             ),
         },
     )
@@ -243,8 +257,8 @@ class OurLogoutView(LogoutView):
 
         if not refresh_token:
             return Response(
-                {"detail": _("Refresh token was not provided in request data.")},
-                status=status.HTTP_401_UNAUTHORIZED,
+                {"error": _("Refresh token was not provided in request data.")},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         # RefreshToken을 블랙리스트에 추가하여 무효화
@@ -258,11 +272,11 @@ class OurLogoutView(LogoutView):
             )
 
         except TokenError as e:
-            return Response({"detail": str(e)}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({"error": str(e)}, status=status.HTTP_401_UNAUTHORIZED)
 
         except Exception as e:
             return Response(
-                {"detail": _("An error occurred during the logout process.")},
+                {"error": _("An error occurred during the logout process.")},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -620,11 +634,9 @@ class PasswordResetRequestView(APIView):
         token = default_token_generator.make_token(user)
 
         # 재설정 url (frontend url)
-        # reset_url = f"{request.build_absolute_uri(reverse('password-reset-confirm', args=[uid, token]))}"
         reset_url = f"https://our-journey-fe.vercel.app/reset-password/{uid}/{token}"
         # 이메일 내용
         subject = "Our Journey에서 비밀번호 재설정"
-        # message = f"안녕하세요,\n\n다음 링크를 통해 비밀번호를 재설정할 수 있습니다:\n{reset_url}\n새 비밀번호를 요청하지 않으셨나요? 이 이메일을 무시해주세요."
 
         # HTML 형식으로 이메일 내용 생성
         html_message = format_html(
