@@ -24,6 +24,8 @@ from drf_spectacular.views import (
     SpectacularYAMLAPIView,
 )
 
+from config.views import HealthCheckView
+
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("auth/", include("apps.authapp.urls")),
@@ -40,4 +42,5 @@ urlpatterns = [
         SpectacularRedocView.as_view(url_name="schema-json"),
         name="redoc",
     ),
+    path("health", HealthCheckView.as_view(), name="health-check"),
 ]
