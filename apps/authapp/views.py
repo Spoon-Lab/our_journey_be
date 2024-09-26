@@ -7,6 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.http import HttpResponseRedirect, JsonResponse
+from django.shortcuts import render
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.utils.translation import gettext_lazy as _
@@ -173,7 +174,7 @@ class OurLoginView(LoginView):
     )
     def post(self, request, *args, **kwargs):
         self.request = request
-        
+
         # admin 계정이 아니고, 인증 메일 확인하기 전이면 403
         if (
             not self.request.user.is_superuser
@@ -308,6 +309,10 @@ class UserAuthenticationView(APIView):
             "authorization": authorization_status,
         }
         return JsonResponse(response_data)
+
+
+def email_confirm(request):
+    return render(request, "auth/email_confirm.html")
 
 
 @extend_schema(
