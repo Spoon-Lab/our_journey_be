@@ -173,7 +173,7 @@ class OurLoginView(LoginView):
     )
     def post(self, request, *args, **kwargs):
         self.request = request
-        
+
         # admin 계정이 아니고, 인증 메일 확인하기 전이면 403
         if (
             not self.request.user.is_superuser
