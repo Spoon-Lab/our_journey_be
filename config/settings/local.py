@@ -5,7 +5,7 @@ from .base import *
 env = environ.Env(DEBUG=(bool, False))
 
 
-DEBUG = True
+DEBUG = False
 
 # 환경변수 파일 읽어오기
 environ.Env.read_env(env_file=os.path.join(BASE_DIR, ".env"))
@@ -17,7 +17,7 @@ MYSQL_HOST = env("MYSQL_HOST")
 
 MYSQL_HOST = env("MYSQL_HOST")
 
-ALLOWED_HOSTS = ["3.38.47.219", "127.0.0.1", "localhost"]
+ALLOWED_HOSTS = ["*"]
 
 
 CSRF_TRUSTED_ORIGINS = [
@@ -32,6 +32,8 @@ CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_METHODS = ["GET", "POST", "PUT", "HEAD", "OPTIONS", "DELETE"]
 
 CORS_ORIGIN_ALLOW_ALL = True
+
+CORS_ALLOW_HEADERS = ["*"]
 
 DATABASES = {
     "default": {
