@@ -1,3 +1,5 @@
+import os
+
 from django.utils.translation import gettext_lazy as _
 from drf_spectacular.utils import OpenApiExample, OpenApiResponse, extend_schema
 from rest_framework import status
@@ -54,13 +56,20 @@ class ImageUploadAPIView(APIView):
         upload_tasks = []
         image_urls = []
         for x in images:
+            file_extension = os.path.splitext(x.name)[1]
+
             task = asyncio.create_task(s3_upload_image(f"{folder_dir}/{x}", x))
             x.file.seek(0)  # 파일 포인터를 처음으로 되돌림
             upload_tasks.append(task)
 
             # Presigned URL 생성
             presigned_url = generate_presigned_url(
-                self.S3_BUCKET_NAME, folder_dir, x, 60 * 60, "get"
+                self.S3_BUCKET_NAME,
+                folder_dir,
+                x,
+                file_extension,  # 파일 확장자명 전달
+                60 * 60,
+                "get",
             )
             image_urls.append(presigned_url)
 
