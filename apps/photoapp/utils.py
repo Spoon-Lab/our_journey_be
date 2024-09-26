@@ -26,7 +26,7 @@ async def s3_upload_image(destination_blob_name, source_file_name):
         return False
 
 
-def generate_presigned_url(bucket, folder, key, expired_in, _method):
+def generate_presigned_url(bucket, folder, key, file_extension, expired_in, _method):
     try:
         s3 = boto3.client(
             "s3",
@@ -37,9 +37,23 @@ def generate_presigned_url(bucket, folder, key, expired_in, _method):
             ),
             region_name="ap-northeast-2",
         )
+        # 확장자에 따른 기본적인 Content-Type 매핑
+        mime_types = {
+            ".jpeg": "image/jpeg",
+            ".jpg": "image/jpeg",
+            ".png": "image/png",
+            ".gif": "image/gif",
+            ".bmp": "image/bmp",
+        }
+
+        # 확장자에 맞는 MIME 타입을 가져옴, 없을 경우 기본값
+        mime_type = mime_types.get(file_extension, "application/octet-stream")
+
         param = {
             "Bucket": bucket,
             "Key": f"{folder}/{key}",
+            "ResponseContentType": mime_type,  # 확장자에 따른 동적 MIME 타입 설정
+            "ResponseContentDisposition": "inline",  # 브라우저에서 바로 열리도록 설정
         }
         if _method == "put":
             param["ContentType"] = "image/*"
