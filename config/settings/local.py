@@ -5,7 +5,7 @@ from .base import *
 env = environ.Env(DEBUG=(bool, False))
 
 
-DEBUG = False
+DEBUG = True
 
 # 환경변수 파일 읽어오기
 environ.Env.read_env(env_file=os.path.join(BASE_DIR, ".env"))

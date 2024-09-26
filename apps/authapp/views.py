@@ -7,6 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.http import HttpResponseRedirect, JsonResponse
+from django.shortcuts import render
 from django.utils.encoding import force_bytes
 from django.utils.html import format_html
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
@@ -311,6 +312,10 @@ class UserAuthenticationView(APIView):
         return JsonResponse(response_data)
 
 
+def email_confirm(request):
+    return render(request, "auth/email_confirm.html")
+
+
 @extend_schema(
     tags=["User Email confirmation after join"],
     description="유저가 회원가입 후 메일함에서 인증 완료하는 api",
@@ -337,7 +342,7 @@ class ConfirmEmailView(APIView):
         }
         response = requests.post(url, json=data)
 
-        return HttpResponseRedirect(redirect_to="http://localhost:3000/login")
+        return HttpResponseRedirect(redirect_to="/auth/email-confirm")
 
     def get_object(self, queryset=None):
         key = self.kwargs["key"]

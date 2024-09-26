@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>이메일 인증 완료</title>
+
+    <!-- Pretendard Font CDN -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+
+    <style>
+        body {
+            font-family: 'Pretendard', sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        .email-container {
+            max-width: 600px;
+            width: 100%;
+            height: 100dvh;
+            margin: 0 auto;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .email-header {
+            text-align: center;
+            padding-bottom: 20px;
+        }
+        .email-header img {
+            width: 120px;
+        }
+        .email-content {
+            color: #333;
+            line-height: 1.6;
+        }
+        .email-footer {
+            text-align: center;
+            padding-top: 20px;
+            color: #999;
+            font-size: 12px;
+        }
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #11AFFF;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="email-header">
+            <h1>안녕하세요 회원님!</h1>
+        </div>
+        <div class="email-content">
+            <p>이메일 인증이 정상적으로 완료되었습니다.</p>
+            <p>이제 <strong>OurJourney</strong>로 돌아가셔서 로그인하신 후 모든 기능을 자유롭게 사용할 수 있습니다.</p>
+            <p>서비스를 이용해 주셔서 감사합니다!</p>
+            <div style="text-align: center; margin-top: 30px;">
+                <a href="https://our-journey-fe.vercel.app" class="button">OurJourney</a>
+            </div>
+        </div>
+        <div class="email-footer">
+            <p>본 메일은 발신 전용입니다. 궁금하신 점은 <a href="mailto:pudding4spoon@gmail.com">pudding4spoon@gmail.com</a>으로 문의해 주세요.</p>
+            <p>&copy; 2024 OurJourney. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
