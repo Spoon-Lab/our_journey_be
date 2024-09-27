@@ -5,12 +5,14 @@ from django.db.models.signals import post_migrate
 
 def create_superuser(sender, **kwargs):
     User = get_user_model()
-    password = "adminpassword"
+    password = "tmvnsfoq123!"
 
     # 슈퍼유저가 존재하지 않는 경우에만 새 슈퍼유저 생성
     if not User.objects.filter(is_superuser=True).exists():
-        User.objects.create_superuser(email="admin@example.com", password=password)
-        print("Superuser created with email: admin@example.com")
+        User.objects.create_superuser(
+            email="pudding4spoon@gmail.com", password=password
+        )
+        print("Superuser created with email: pudding4spoon@gmail.com")
     else:
         print("Superuser already exists.")
 

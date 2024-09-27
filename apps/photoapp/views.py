@@ -58,22 +58,24 @@ class ImageUploadAPIView(APIView):
         for x in images:
             file_extension = os.path.splitext(x.name)[1]
 
-            task = asyncio.create_task(s3_upload_image(f"{folder_dir}/{x}", x))
-            x.file.seek(0)  # 파일 포인터를 처음으로 되돌림
+            # 파일을 다시 처음부터 읽을 수 있도록 설정
+            x.file.seek(0)
+
+            # S3에 파일 업로드 비동기 태스크 생성
+            task = asyncio.create_task(
+                s3_upload_image(
+                    f"{folder_dir}/{x.name}", x.file, file_extension
+                )  # x.file로 파일 객체 전달
+            )
             upload_tasks.append(task)
 
-            # Presigned URL 생성
-            presigned_url = generate_presigned_url(
-                self.S3_BUCKET_NAME,
-                folder_dir,
-                x,
-                file_extension,  # 파일 확장자명 전달
-                60 * 60,
-                "get",
-            )
-            image_urls.append(presigned_url)
+            # S3 퍼블릭 URL 생성
+            public_url = f"https://{bucket_name}.s3.ap-northeast-2.amazonaws.com/{folder_dir}/{x.name}"
+            image_urls.append(public_url)
 
+        # 모든 업로드 작업을 비동기로 실행
         await asyncio.gather(*upload_tasks)
+
         return image_urls
 
     @extend_schema(

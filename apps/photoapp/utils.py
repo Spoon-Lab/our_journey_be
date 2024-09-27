@@ -1,4 +1,5 @@
 import asyncio
+import mimetypes
 
 import boto3
 from botocore.config import Config
@@ -6,7 +7,7 @@ from botocore.exceptions import ClientError
 from django.conf import settings
 
 
-async def s3_upload_image(destination_blob_name, source_file_name):
+async def s3_upload_image(destination_blob_name, source_file_name, file_extension):
     try:
         session = boto3.Session(
             aws_access_key_id=settings.S3_ACCESS_KEY,
@@ -14,10 +15,20 @@ async def s3_upload_image(destination_blob_name, source_file_name):
         )
 
         s3 = session.resource("s3")
+
+        # 확장자에 따른 Content-Type 자동 설정
+        content_type, _ = mimetypes.guess_type(destination_blob_name)
+        if content_type is None:
+            content_type = "application/octet-stream"  # 기본값 설정
+
+        print(content_type)
+
         await asyncio.to_thread(
             s3.Bucket(settings.S3_BUCKET_NAME).put_object,
             Key=destination_blob_name,
             Body=source_file_name,
+            ContentType=content_type,  # Content-Type 설정 추가
+            ContentDisposition="inline",
         )
         return True
 
