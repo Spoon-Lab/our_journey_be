@@ -70,17 +70,17 @@ class CustomRegisterView(RegisterView):
                     OpenApiExample(
                         name="This email is already registered",
                         summary="이미 해당 이메일이 사용 중일 때",
-                        value={"error": "email is already registered"},
+                        value={"error": "이미 사용 중인 이메일입니다."},
                     ),
                     OpenApiExample(
                         name="The two password fields do not match.",
                         summary="password1과 password2 필드 값이 맞지 않을 때",
-                        value={"error": "password do not match"},
+                        value={"error": "비밀번호가 일치하지 않습니다."},
                     ),
                     OpenApiExample(
                         name="password validation error",
                         summary="비밀번호 유효성 검사 오류",
-                        value={"error": "use safe password"},
+                        value={"error": "안전한 비밀번호를 사용해 주세요."},
                     ),
                 ],
                 description="email is already registered or password error",
@@ -95,11 +95,11 @@ class CustomRegisterView(RegisterView):
             errors = serializer.errors
             # 이메일 중복 에러 처리
             if "email" in errors:
-                raise ValidationError({"error": "email is already registered"})
+                raise ValidationError({"error": "이미 사용 중인 이메일입니다"})
             if "password1" in errors:
-                raise ValidationError({"error": "use safe password"})
+                raise ValidationError({"error": "안전한 비밀번호를 사용해 주세요"})
             else:
-                raise ValidationError({"error": "password do not match"})
+                raise ValidationError({"error": "비밀번호가 일치하지 않습니다"})
         return super().post(request, *args, **kwargs)
 
 
@@ -133,13 +133,13 @@ class OurLoginView(LoginView):
                         "detail": {
                             "type": "string",
                             "nullable": True,  # 선택적일 수 있음
-                            "example": "Email verification is required to log in.",
+                            "example": "이메일 인증이 필요합니다.",
                         },
                         "email": {
                             "type": "array",
                             "items": {
                                 "type": "string",
-                                "example": "No account found with this email address.",
+                                "example": "해당 계정은 존재하지 않습니다.",
                             },
                             "nullable": True,  # 선택적일 수 있음
                         },
@@ -149,12 +149,12 @@ class OurLoginView(LoginView):
                     OpenApiExample(
                         name="No account found",
                         summary="계정이 존재하지 않을 때",
-                        value={"error": ["No account found with this email address."]},
+                        value={"error": ["해당 계정은 존재하지 않습니다."]},
                     ),
                     OpenApiExample(
                         name="Incorrect password",
                         summary="비밀번호가 틀렸을 때",
-                        value={"error": ["Incorrect password. Please try again."]},
+                        value={"error": ["올바르지 않은 비밀번호입니다."]},
                     ),
                 ],
                 description="No account or incorrect password",
@@ -165,7 +165,7 @@ class OurLoginView(LoginView):
                     "properties": {
                         "error": {
                             "type": "string",
-                            "example": ["Email verification is required to log in."],
+                            "example": ["이메일 인증이 필요합니다."],
                         }
                     },
                 },
@@ -184,7 +184,7 @@ class OurLoginView(LoginView):
             ).exists()
         ):
             return Response(
-                {"error": [_("Email verification is required to log in.")]},
+                {"error": [_("이메일 인증이 필요합니다.")]},
                 status=status.HTTP_403_FORBIDDEN,  # Forbidden 응답
             )
         else:
@@ -476,9 +476,9 @@ class GoogleLoginCallback(APIView):
             if token_info.get("email_verified"):
                 return email, token_info
             else:
-                raise ValueError("Email not verified")
+                raise ValueError("이메일이 인증되지 않았습니다.")
         else:
-            raise ValueError("Invalid token")
+            raise ValueError("토큰이 유효하지 않습니다.")
 
     def create_or_update_user(self, email, token_info):
         try:
@@ -553,7 +553,7 @@ class GoogleLoginCallback(APIView):
 
         if not id_token:
             return Response(
-                {"error": "ID token is required."},
+                {"error": "ID token값을 전달해주세요."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -602,12 +602,12 @@ class PasswordResetRequestView(APIView):
                     OpenApiExample(
                         name="User not found",
                         summary="유저가 존재하지 않을 때의 응답",
-                        value={"error": "User does not exist."},
+                        value={"error": "존재하지 않는 사용자입니다."},
                     ),
                     OpenApiExample(
                         name="Email required",
                         summary="이메일이 제공되지 않았을 때의 응답",
-                        value={"error": "Email is required."},  # 다른 예시 데이터
+                        value={"error": "이메일을 입력해주세요."},  # 다른 예시 데이터
                     ),
                 ],
                 description="Email is required or User does not exist.",
@@ -619,14 +619,15 @@ class PasswordResetRequestView(APIView):
         email = request.data.get("email")
         if not email:
             return Response(
-                {"error": "Email is required."}, status=status.HTTP_400_BAD_REQUEST
+                {"error": "이메일을 입력해주세요."}, status=status.HTTP_400_BAD_REQUEST
             )
 
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
             return Response(
-                {"error": "User does not exist."}, status=status.HTTP_400_BAD_REQUEST
+                {"error": "존재하지 않는 사용자입니다."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         # 비밀번호 재설정 링크 토큰 설정
@@ -682,7 +683,7 @@ class PasswordResetConfirmView(PasswordChangeView):
                     OpenApiExample(
                         name="Invalid token or token is expired",
                         summary="비밀번호 재설정 링크가 유효하지 않거나 만료 혹은 이미 사용되었을 경우",
-                        value={"error": ["Invalid token or token is expired."]},
+                        value={"error": ["유효하지 않거나 만료된 토큰입니다"]},
                     ),
                     OpenApiExample(
                         name="password value is required",
@@ -708,13 +709,13 @@ class PasswordResetConfirmView(PasswordChangeView):
         # User 데이터베이스에 id 값이 없을 때
         except (TypeError, ValueError, OverflowError, User.DoesNotExist):
             return Response(
-                {"error": ["Invalid uid"]}, status=status.HTTP_400_BAD_REQUEST
+                {"error": ["유효하지 않는 uid값"]}, status=status.HTTP_400_BAD_REQUEST
             )
 
         # 재설정을 요청하는 유저와 토큰값이 일치한지 확인
         if not default_token_generator.check_token(user, token):
             return Response(
-                {"error": ["Invalid token or token is expired."]},
+                {"error": ["유효하지 않거나 만료된 토큰입니다"]},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -731,6 +732,6 @@ class PasswordResetConfirmView(PasswordChangeView):
         for field, errors in serializer.errors.items():
             for error in errors:
                 if "필수 항목" in error:
-                    error_list.append(f"{field} is required")
+                    error_list.append(f"{field} 값이 필요합니다.")
 
         return Response({"error": error_list}, status=status.HTTP_400_BAD_REQUEST)
