@@ -366,12 +366,9 @@ class ConfirmEmailView(APIView):
     def get(self, *args, **kwargs):
         confirmation = self.get_object()
 
-        # email_confirmation이 None이면 400 응답
+        # email_confirmation이 None => 이미 이메일 인증이 완료되었으나 별도의 400에러가 아닌 완료 템플릿으로 리다이렉트
         if confirmation is None:
-            return Response(
-                {"error": "Invalid or expired confirmation link."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return HttpResponseRedirect(redirect_to="/auth/email-confirm")
 
         confirmation.confirm(self.request)
 
