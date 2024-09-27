@@ -113,12 +113,12 @@ class ImageUploadAPIView(APIView):
                     OpenApiExample(
                         name="Missing photo_type",
                         summary="photo_type 값이 전달되지 않음",
-                        value={"detail": "photo_type is required."},
+                        value={"detail": "이미지 타입을 알려주세요."},
                     ),
                     OpenApiExample(
                         name="Missing image file",
                         summary="이미지 파일이 전달되지 않음",
-                        value={"detail": "Image file must be provided."},
+                        value={"detail": "이미지 파일을 전달해주세요."},
                     ),
                 ],
                 description="Bad request due to missing or incorrect parameters.",
@@ -130,11 +130,11 @@ class ImageUploadAPIView(APIView):
     def post(self, request):
         photo_type = request.data.get("photo_type")
         if not photo_type:
-            raise ValidationError({"detail": _("Photo type is required.")})
+            raise ValidationError({"detail": _("이미지 타입을 알려주세요.")})
 
         images = request.FILES.getlist("images")
         if not images:
-            raise ValidationError({"detail": _("Image file must be provided.")})
+            raise ValidationError({"detail": _("이미지 파일을 전달해주세요.")})
 
         folder_dir = self.get_s3_path(photo_type)
 

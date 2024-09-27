@@ -62,12 +62,10 @@ class CustomLoginSerializer(LoginSerializer):
             if not user:
                 # 사용자 객체가 없으면 자격 증명이 잘못된 것
                 if User.objects.filter(email=email).exists():
-                    raise ValidationError(
-                        {"error": _("Incorrect password. Please try again.")}
-                    )
+                    raise ValidationError({"error": _("올바르지 않은 비밀번호입니다.")})
                 else:
                     raise ValidationError(
-                        {"error": _("No account found with this email address.")}
+                        {"error": _("해당 계정은 존재하지 않습니다.")}
                     )
         else:
             raise serializers.ValidationError(_('Must include "email" and "password".'))
