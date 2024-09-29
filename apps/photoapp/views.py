@@ -53,10 +53,21 @@ class ImageUploadAPIView(APIView):
             )
 
     async def upload_images(self, bucket_name, folder_dir, images):
+        VALID_EXTENSIONS = [
+            ".jpg",
+            ".jpeg",
+            "png",
+            ".webp",
+            ".gif",
+        ]  # 유효한 파일 확장자 리스트
         upload_tasks = []
         image_urls = []
         for x in images:
             file_extension = os.path.splitext(x.name)[1]
+
+            # 파일 확장자 유효성 검사
+            if file_extension not in VALID_EXTENSIONS:
+                raise ValidationError({"error": _("허용되지 않는 파일 확장자입니다.")})
 
             # 파일을 다시 처음부터 읽을 수 있도록 설정
             x.file.seek(0)

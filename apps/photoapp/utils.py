@@ -21,8 +21,6 @@ async def s3_upload_image(destination_blob_name, source_file_name, file_extensio
         if content_type is None:
             content_type = "application/octet-stream"  # 기본값 설정
 
-        print(content_type)
-
         await asyncio.to_thread(
             s3.Bucket(settings.S3_BUCKET_NAME).put_object,
             Key=destination_blob_name,
