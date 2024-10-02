@@ -56,7 +56,7 @@ class ImageUploadAPIView(APIView):
         VALID_EXTENSIONS = [
             ".jpg",
             ".jpeg",
-            "png",
+            ".png",
             ".webp",
             ".gif",
         ]  # 유효한 파일 확장자 리스트
