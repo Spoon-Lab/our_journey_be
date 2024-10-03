@@ -2,7 +2,7 @@ from allauth.account.adapter import get_adapter
 from allauth.account.utils import setup_user_email
 from dj_rest_auth.registration.serializers import RegisterSerializer
 from dj_rest_auth.serializers import LoginSerializer
-from django.contrib.auth import authenticate
+from django.contrib.auth import authenticate, get_user_model
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -18,6 +18,14 @@ class CustomRegisterSerializer(RegisterSerializer):
         # 폼에서 username 필드 제거
         if "username" in self.fields:
             self.fields.pop("username")
+
+    def validate_email(self, value):
+        User = get_user_model()
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError(
+                {"error": "이미 사용 중인 이메일입니다"}, code=400
+            )
+        return value
 
     def get_cleaned_data(self):
         return {
