@@ -1,3 +1,4 @@
+import dns.resolver
 import requests
 import sentry_sdk
 from allauth.account.models import EmailAddress, EmailConfirmationHMAC
@@ -44,6 +45,15 @@ from .serializers import (
 class CustomRegisterView(RegisterView):
     serializer_class = CustomRegisterSerializer
 
+    def is_valid_email_domain(self, email):
+        domain = email.split("@")[-1]
+        try:
+            # 도메인의 MX 레코드가 존재하는지 확인
+            dns.resolver.resolve(domain, "MX")
+            return True
+        except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN):
+            return False
+
     @extend_schema(
         tags=["User Registration"],
         responses={
@@ -69,6 +79,13 @@ class CustomRegisterView(RegisterView):
                 },
                 examples=[
                     OpenApiExample(
+                        name="Invalid Email Domain",
+                        summary="이메일 도메인이 유효하지 않을 때",
+                        value={
+                            "error": "유효하지 않은 이메일 도메인입니다. 이메일 주소를 확인하세요."
+                        },
+                    ),
+                    OpenApiExample(
                         name="This email is already registered",
                         summary="이미 해당 이메일이 사용 중일 때",
                         value={"error": "이미 사용 중인 이메일입니다."},
@@ -84,12 +101,25 @@ class CustomRegisterView(RegisterView):
                         value={"error": "안전한 비밀번호를 사용해 주세요."},
                     ),
                 ],
-                description="email is already registered or password error",
+                description="Failed to validation",
             ),
         },
     )
     @extend_schema_serializer(exclude_fields=["username"])
     def post(self, request, *args, **kwargs):
+        email = request.data.get("email", "")
+
+        # 이메일 도메인 유효성 검사
+        if not self.is_valid_email_domain(email):
+            return Response(
+                {
+                    "error": _(
+                        "유효하지 않은 이메일 도메인입니다. 이메일 주소를 확인하세요."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         serializer = self.serializer_class(data=request.data)
 
         try:
