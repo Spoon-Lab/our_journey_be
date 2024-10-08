@@ -15,5 +15,5 @@ EXPOSE 8000
 # Django 명령어
 CMD ["bash", "-c", "python3 manage.py collectstatic --noinput --settings=config.settings.local &&\
      python3 manage.py migrate --settings=config.settings.local &&\
-     gunicorn config.wsgi --env DJANGO_SETTINGS_MODULE=config.settings.local --bind 0.0.0.0:8000 --workers=3 --timeout 180"]
+     gunicorn config.wsgi --env DJANGO_SETTINGS_MODULE=config.settings.local --bind 0.0.0.0:8000 --workers=5 --timeout 180"]
 
