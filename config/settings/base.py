@@ -3,6 +3,7 @@ from datetime import timedelta
 from pathlib import Path
 
 import pymysql
+import sentry_sdk
 
 pymysql.install_as_MySQLdb()
 
@@ -162,6 +163,17 @@ SIMPLE_JWT = {
     # "AUTH_COOKIE_HTTP_ONLY": True,  # 클라이언트 자바스크립트에서 접근 불가
     "AUTH_COOKIE_PATH": "/",  # 쿠키의 유효 경로
 }
+
+sentry_sdk.init(
+    dsn="https://153978f09ca2a454959514196326bb34@o4508064670154752.ingest.us.sentry.io/4508064673955840",
+    # Set traces_sample_rate to 1.0 to capture 100%
+    # of transactions for tracing.
+    traces_sample_rate=1.0,
+    # Set profiles_sample_rate to 1.0 to profile 100%
+    # of sampled transactions.
+    # We recommend adjusting this value in production.
+    profiles_sample_rate=1.0,
+)
 
 REST_AUTH_SERIALIZERS = {
     "TOKEN_SERIALIZER": "dj_rest_auth.serializers.JWTSerializer",

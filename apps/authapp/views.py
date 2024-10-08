@@ -1,4 +1,5 @@
 import requests
+import sentry_sdk
 from allauth.account.models import EmailAddress, EmailConfirmationHMAC
 from dj_rest_auth.registration.views import RegisterView
 from dj_rest_auth.views import LoginView, LogoutView, PasswordChangeView
@@ -91,15 +92,26 @@ class CustomRegisterView(RegisterView):
     def post(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data)
 
-        if not serializer.is_valid():
-            errors = serializer.errors
-            # 이메일 중복 에러 처리
-            if "email" in errors:
-                raise ValidationError({"error": "이미 사용 중인 이메일입니다"})
-            if "password1" in errors:
-                raise ValidationError({"error": "안전한 비밀번호를 사용해 주세요"})
-            else:
-                raise ValidationError({"error": "비밀번호가 일치하지 않습니다"})
+        try:
+            if not serializer.is_valid():
+                errors = serializer.errors
+                # 이메일 중복 에러 처리
+                if "email" in errors:
+                    raise ValidationError({"error": "이미 사용 중인 이메일입니다"})
+                if "password1" in errors:
+                    raise ValidationError({"error": "안전한 비밀번호를 사용해 주세요"})
+                else:
+                    raise ValidationError({"error": "비밀번호가 일치하지 않습니다"})
+        except ValidationError as e:
+            # Sentry로 예외를 전송
+            sentry_sdk.capture_exception(e)
+            raise e
+        except Exception as e:
+            # 예상치 못한 500 에러를 Sentry로 전송
+            sentry_sdk.capture_exception(e)
+            raise e
+
+            # 성공 시의 응답 처리
         return super().post(request, *args, **kwargs)
 
 
@@ -183,6 +195,10 @@ class OurLoginView(LoginView):
                 email=request.data["email"], verified=False
             ).exists()
         ):
+            # Sentry에 메시지를 전송하여 인증되지 않은 이메일 접근을 기록
+            sentry_sdk.capture_message(
+                f"Unauthorized access attempt with unverified email: {request.data['email']}"
+            )
             return Response(
                 {"error": [_("이메일 인증이 필요합니다.")]},
                 status=status.HTTP_403_FORBIDDEN,  # Forbidden 응답
@@ -272,9 +288,13 @@ class OurLogoutView(LogoutView):
             )
 
         except TokenError as e:
+            # 토큰 관련 예외 처리 및 Sentry로 예외 전송
+            sentry_sdk.capture_exception(e)
             return Response({"error": str(e)}, status=status.HTTP_401_UNAUTHORIZED)
 
         except Exception as e:
+            # 예상치 못한 500 에러를 Sentry로 전송
+            sentry_sdk.capture_exception(e)
             return Response(
                 {"error": _("An error occurred during the logout process.")},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -378,6 +398,13 @@ class ConfirmEmailView(APIView):
             "id": confirmation.email_address.user.id,
         }
         response = requests.post(url, json=data)
+
+        # spring 프로필 생성 api 응답 코드가 200 또는 201이 아닐 때 Sentry에 메시지를 전송
+        if response.status_code not in [200, 201]:
+            sentry_sdk.capture_message(
+                f"Failed to create profile in Spring server. "
+                f"Status code: {response.status_code}, Response: {response.text}"
+            )
 
         return HttpResponseRedirect(redirect_to="/auth/email-confirm")
 
@@ -497,6 +524,13 @@ class GoogleLoginCallback(APIView):
                 "id": user.id,
             }
             response = requests.post(url, json=data)
+
+            # spring 프로필 생성 api 응답 코드가 200 또는 201이 아닐 때 Sentry에 메시지를 전송
+            if response.status_code not in [200, 201]:
+                sentry_sdk.capture_message(
+                    f"Failed to create profile in Spring server. "
+                    f"Status code: {response.status_code}, Response: {response.text}"
+                )
 
         return user
 

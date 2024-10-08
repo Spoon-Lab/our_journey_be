@@ -24,7 +24,7 @@ from drf_spectacular.views import (
     SpectacularYAMLAPIView,
 )
 
-from config.views import HealthCheckView
+from config.views import HealthCheckView, trigger_error
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -43,4 +43,5 @@ urlpatterns = [
         name="redoc",
     ),
     path("health", HealthCheckView.as_view(), name="health-check"),
+    path("sentry-debug/", trigger_error),
 ]
