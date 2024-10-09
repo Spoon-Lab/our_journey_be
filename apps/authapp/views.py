@@ -82,7 +82,7 @@ class CustomRegisterView(RegisterView):
                         name="Invalid Email Domain",
                         summary="이메일 도메인이 유효하지 않을 때",
                         value={
-                            "error": "유효하지 않은 이메일 도메인입니다. 이메일 주소를 확인하세요."
+                            "error": "유효하지 않은 이메일 도메인입니다.\n이메일 주소를 확인하세요."
                         },
                     ),
                     OpenApiExample(
@@ -114,7 +114,7 @@ class CustomRegisterView(RegisterView):
             return Response(
                 {
                     "error": _(
-                        "유효하지 않은 이메일 도메인입니다. 이메일 주소를 확인하세요."
+                        "유효하지 않은 이메일 도메인입니다.\n이메일 주소를 확인하세요."
                     )
                 },
                 status=status.HTTP_400_BAD_REQUEST,
