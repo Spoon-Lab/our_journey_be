@@ -515,6 +515,19 @@ class CustomTokenRefreshView(TokenRefreshView):
 
 
 class GoogleLoginCallback(APIView):
+    def send_profile_creation_request(self, user_id):
+        # 유저 db에 등록된 이후에 프로필 생성하는 spring api 요청
+        url = "http://13.125.137.216:8080/profiles"
+        data = {"id": user_id}
+        response = requests.post(url, json=data)
+
+        # spring 프로필 생성 api 응답 코드가 200 또는 201이 아닐 때 Sentry에 메시지를 전송
+        if response.status_code not in [200, 201]:
+            sentry_sdk.capture_message(
+                f"Failed to create profile in Spring server. "
+                f"Status code: {response.status_code}, Response: {response.text}"
+            )
+
     def verify_google_token(self, id_token):
         # Google의 토큰 검증 엔드포인트
         google_token_info_url = (
@@ -538,6 +551,14 @@ class GoogleLoginCallback(APIView):
         try:
             # 이미 등록된 사용자가 있는지 확인
             user = User.objects.get(email=email)
+            # 사용자가 존재하지만 이메일 인증이 완료되지 않았을 경우 구글 로그인으로 이메일 인증 처리
+            email_address = EmailAddress.objects.get(user=user, email=email)
+            if not email_address.verified:
+                email_address.verified = True
+                email_address.save()
+
+                self.send_profile_creation_request(user.id)
+
         except User.DoesNotExist:
             # 새로운 사용자 생성
             user = User.objects.create(
@@ -547,20 +568,6 @@ class GoogleLoginCallback(APIView):
             )
             user.set_unusable_password()  # 소셜 로그인은 비밀번호가 필요 없음
             user.save()
-
-            # 유저 db에 등록된 이후에 프로필 생성하는 spring api 요청
-            url = "http://13.125.137.216:8080/profiles"
-            data = {
-                "id": user.id,
-            }
-            response = requests.post(url, json=data)
-
-            # spring 프로필 생성 api 응답 코드가 200 또는 201이 아닐 때 Sentry에 메시지를 전송
-            if response.status_code not in [200, 201]:
-                sentry_sdk.capture_message(
-                    f"Failed to create profile in Spring server. "
-                    f"Status code: {response.status_code}, Response: {response.text}"
-                )
 
         return user
 
