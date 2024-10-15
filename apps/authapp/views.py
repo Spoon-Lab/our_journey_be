@@ -569,6 +569,8 @@ class GoogleLoginCallback(APIView):
             user.set_unusable_password()  # 소셜 로그인은 비밀번호가 필요 없음
             user.save()
 
+            self.send_profile_creation_request(user.id)
+
         return user
 
     def get_user_info(self, user):
